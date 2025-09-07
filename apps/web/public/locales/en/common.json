@@ -1,0 +1,23 @@
+{
+  "nav": {"home": "Home", "services": "Services", "references": "References", "rfq": "Request Quote", "privacy": "Privacy"},
+  "hero": {"title": "Solid construction solutions", "subtitle": "On time, on budget, without compromise.", "cta": "Request a quote"},
+  "services": {"title": "Our Services", "list": ["General contracting", "Structural works", "Renovation", "Industrial halls"]},
+  "references": {"title": "References"},
+  "rfq": {
+    "title": "Request a Quote",
+    "name": "Name",
+    "company": "Company",
+    "email": "Email",
+    "phone": "Phone",
+    "location": "Location",
+    "project_type": "Project type",
+    "budget_range": "Budget range",
+    "start_date": "Start date",
+    "message": "Short description",
+    "submit": "Submit",
+    "success": "Thank you! We'll get back to you soon.",
+    "error": "Something went wrong. Please try again."
+  },
+  "footer": {"copy": "© {{year}} Construction Company — All rights reserved."},
+  "cookies": {"text": "This website uses cookies to enhance your experience.", "accept": "Accept"}
+}

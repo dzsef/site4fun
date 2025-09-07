@@ -1,0 +1,23 @@
+{
+  "nav": {"home": "Kezdőlap", "services": "Szolgáltatások", "references": "Referenciák", "rfq": "Ajánlatkérés", "privacy": "Adatkezelés"},
+  "hero": {"title": "Masszív megoldások az építőiparban", "subtitle": "Időre, költségkereten belül, kompromisszumok nélkül.", "cta": "Kérjen ajánlatot"},
+  "services": {"title": "Szolgáltatásaink", "list": ["Generálkivitelezés", "Szerkezetépítés", "Felújítás", "Ipari csarnokok"]},
+  "references": {"title": "Referenciák"},
+  "rfq": {
+    "title": "Ajánlatkérés",
+    "name": "Név",
+    "company": "Cég",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "location": "Helyszín",
+    "project_type": "Projekt típusa",
+    "budget_range": "Tervezett költségkeret",
+    "start_date": "Kezdés dátuma",
+    "message": "Rövid leírás",
+    "submit": "Küldés",
+    "success": "Köszönjük! Hamarosan felvesszük Önnel a kapcsolatot.",
+    "error": "Hiba történt. Próbálja újra."
+  },
+  "footer": {"copy": "© {{year}} Építőipari Cég — Minden jog fenntartva."},
+  "cookies": {"text": "Ez a webhely sütiket használ a jobb felhasználói élmény érdekében.", "accept": "Elfogadom"}
+}
