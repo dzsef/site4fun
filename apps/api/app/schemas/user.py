@@ -1,13 +1,24 @@
-from pydantic import BaseModel, EmailStr
+"""
+Pydantic schemas for user input and output. These classes define the
+structure of requests to and responses from the authentication endpoints.
+"""
 
-class UserCreate(BaseModel):
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, constr
+
+
+class UserBase(BaseModel):
     email: EmailStr
-    password: str
+    role: str
 
-class UserRead(BaseModel):
+
+class UserCreate(UserBase):
+    password: constr(min_length=6)
+
+
+class UserOut(UserBase):
     id: int
-    email: EmailStr
-    is_admin: bool
+    created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True

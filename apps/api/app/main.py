@@ -1,22 +1,38 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import ALLOWED_ORIGINS
-from app.api.v1 import auth as auth_router
-from app.api.v1 import rfq as rfq_router
+from .routers import rfq, auth
 
-app = FastAPI(title="Construction Co. API", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def create_app() -> FastAPI:
+    app = FastAPI()
+    # Allow cross-origin requests during development. Adjust origins in production.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-app.include_router(auth_router.router, prefix="/api/v1")
-app.include_router(rfq_router.router, prefix="/api/v1")
+    # Include the RFQ router
+    app.include_router(rfq.router, prefix="/api/v1", tags=["rfq"])
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+    # Include authentication and user management routes
+    app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+
+    # On startup, create database tables if they don't exist
+    from .db import engine, Base  # imported here to avoid circular imports
+
+    @app.on_event("startup")
+    async def on_startup() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok"}
+
+    return app
+
+
+app = create_app()
