@@ -1,11 +1,19 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, func
-from app.db.base import Base
+"""
+SQLAlchemy model for users. Each user has an email, a hashed password,
+a role indicating whether they are a homeowner, contractor or subcontractor,
+and a timestamp of when they were created.
+"""
+
+from sqlalchemy import Column, Integer, String, DateTime, func
+
+from ..db import Base
+
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(320), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
+
+    id: int = Column(Integer, primary_key=True, index=True)
+    email: str = Column(String, unique=True, index=True, nullable=False)
+    hashed_password: str = Column(String, nullable=False)
+    role: str = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
