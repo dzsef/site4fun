@@ -1,13 +1,16 @@
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-export default function Footer(){
+const Footer: React.FC = () => {
   const { t } = useTranslation();
-  const year = new Date().getFullYear();
   return (
-    <footer className="mt-16 border-t border-white/10">
-      <div className="container py-8 text-sm text-white/70">
-        {t('footer.copy', { year })}
+    <footer className="bg-dark-800 text-gray-300">
+      <div className="container mx-auto py-6 px-4 text-center">
+        <p>&copy; {new Date().getFullYear()} Site4Fun</p>
+        <p className="mt-2 text-sm">{t('footer.disclaimer')}</p>
       </div>
     </footer>
   );
-}
+};
+
+export default Footer;
