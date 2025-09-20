@@ -15,6 +15,11 @@ from sqlalchemy.future import select
 
 from ..db import get_db
 from ..models.user import User
+from ..models.profile import (
+    ContractorProfile,
+    HomeownerProfile,
+    SubcontractorProfile,
+)
 from ..schemas.user import UserCreate, UserOut
 from ..utils.security import hash_password, verify_password, create_access_token
 
@@ -38,6 +43,15 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) ->
     hashed = hash_password(user_data.password)
     new_user = User(email=user_data.email, hashed_password=hashed, role=user_data.role)
     db.add(new_user)
+    await db.flush()
+
+    if user_data.role == "contractor":
+        db.add(ContractorProfile(user_id=new_user.id))
+    elif user_data.role == "subcontractor":
+        db.add(SubcontractorProfile(user_id=new_user.id, skills=[], services=[]))
+    elif user_data.role == "homeowner":
+        db.add(HomeownerProfile(user_id=new_user.id))
+
     await db.commit()
     await db.refresh(new_user)
     return new_user
