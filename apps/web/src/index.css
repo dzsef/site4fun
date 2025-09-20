@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
-
-.btn-primary { @apply bg-[color:var(--safety-yellow,#f5b800)] text-black hover:brightness-90 px-5 py-3 rounded-lg font-semibold; }
-.card { @apply bg-slate-card rounded-2xl p-6 shadow-lg; }
-.container { @apply max-w-6xl mx-auto px-4; }
+html,
+body,
+#root {
+  height: 100%;
+}
