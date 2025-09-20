@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "home": "Kezdőlap",
+    "services": "Szolgáltatások",
+    "references": "Referenciák",
+    "request": "Ajánlatkérés",
+    "login": "Bejelentkezés",
+    "profile": "Profilom",
+    "logout": "Kijelentkezés"
+  },
+  "profile": {
+    "title": "Saját profil",
+    "roleLabel": "Aktív szerepkör: {{role}}",
+    "loading": "Profil betöltése folyamatban...",
+    "save": "Változtatások mentése",
+    "saving": "Mentés...",
+    "remove": "Eltávolítás",
+    "messages": {
+      "saved": "A profil sikeresen frissült!"
+    },
+    "errors": {
+      "loadFailed": "Nem sikerült betölteni a profilodat. Próbáld újra!",
+      "saveFailed": "Nem tudtuk menteni a módosításokat."
+    },
+    "contractor": {
+      "name": "Teljes név",
+      "namePlaceholder": "pl. Kovács Péter",
+      "country": "Ország",
+      "countryPlaceholder": "pl. Magyarország",
+      "city": "Város",
+      "cityPlaceholder": "pl. Budapest",
+      "company": "Cégnév",
+      "companyPlaceholder": "pl. Épít-És Kft."
+    },
+    "subcontractor": {
+      "bio": "Magadról",
+      "bioPlaceholder": "Rövid bemutatkozás, tapasztalatok, erősségek...",
+      "services": "Szolgáltatások",
+      "servicesPlaceholder": "Vesszővel elválasztva, pl. Villanyszerelés, Felújítás",
+      "skills": "Készségek",
+      "skillsPlaceholder": "Vesszővel elválasztva, pl. Vezetékezés, Projektmenedzsment",
+      "area": "Elsődleges munkaterület",
+      "areaPlaceholder": "pl. Budapest és környéke",
+      "experience": "Tapasztalat (év)",
+      "experiencePlaceholder": "pl. 5",
+      "rates": "Óradíj (HUF)",
+      "ratesPlaceholder": "pl. 8500",
+      "availability": {
+        "title": "Elérhetőség",
+        "hint": "Add meg, mely napokon és időpontokban tudsz dolgozni.",
+        "required": "Kérjük add meg a dátumot, a kezdő- és a befejező időt is.",
+        "invalidRange": "A kezdési időnek korábbinak kell lennie a befejezésnél.",
+        "date": "Dátum",
+        "start": "Kezdés",
+        "end": "Befejezés",
+        "add": "Idősáv hozzáadása",
+        "empty": "Még nincs mentett elérhetőséged."
+      }
+    },
+    "homeowner": {
+      "name": "Teljes név",
+      "namePlaceholder": "pl. Nagy Anna",
+      "city": "Város",
+      "cityPlaceholder": "pl. Szeged",
+      "investmentMin": "Beruházási minimum (HUF)",
+      "investmentMinPlaceholder": "pl. 5000000",
+      "investmentMax": "Beruházási maximum (HUF)",
+      "investmentMaxPlaceholder": "pl. 15000000"
+    }
+  },
+  "home": {
+    "heroTitle": "Modern ipari megoldások",
+    "heroSubtitle": "Építkezzünk együtt – minőség és precizitás",
+    "cta": "Kérj ajánlatot",
+    "featuresTitle": "Miért válassz minket?",
+    "feature1Title": "Szakértelem",
+    "feature1Desc": "Tapasztalt csapatunk minden projektet precízen valósít meg.",
+    "feature2Title": "Megbízhatóság",
+    "feature2Desc": "Tartjuk a határidőket, és a minőségből sem engedünk.",
+    "feature3Title": "Rugalmasság",
+    "feature3Desc": "Igényeidhez igazodva alakítjuk szolgáltatásainkat."
+  },
+  "services": {
+    "title": "Szolgáltatásaink",
+    "description": "Ipari projektmenedzsmenttől a műszaki kivitelezésig."
+  },
+  "references": {
+    "title": "Referenciák",
+    "description": "Tekintsd meg korábbi munkáinkat és partnereink véleményét."
+  },
+  "request": {
+    "title": "Ajánlatkérés",
+    "intro": "Töltsd ki az űrlapot, és hamarosan felvesszük veled a kapcsolatot.",
+    "success": "Köszönjük! Az ajánlatkérés elküldve.",
+    "error": "Hiba történt az elküldéskor."
+  },
+  "form": {
+    "name": "Név",
+    "email": "E-mail",
+    "phone": "Telefonszám (opcionális)",
+    "message": "Üzenet",
+    "submit": "Kérek ajánlatot",
+    "sending": "Küldés...",
+    "password": "Jelszó",
+    "errors": {
+      "name": "Kérjük, adj meg egy nevet.",
+      "email": "Érvénytelen e-mail cím.",
+      "message": "Kérjük, adj meg üzenetet."
+    }
+  },
+  "login": {
+    "title": "Bejelentkezés",
+    "submit": "Belépés",
+    "noAccount": "Nincs még fiókod?",
+    "registerLink": "Regisztrálj"
+  },
+  "register": {
+    "title": "Regisztráció",
+    "role": "Szerep",
+    "homeowner": "Tulajdonos",
+    "contractor": "Fővállalkozó",
+    "subcontractor": "Alvállalkozó",
+    "submit": "Regisztráció",
+    "haveAccount": "Már van fiókod?",
+    "loginLink": "Jelentkezz be"
+  },
+  "footer": {
+    "disclaimer": "A weboldalon található adatok tájékoztató jellegűek."
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "references": "References",
+    "request": "Request Quote",
+    "login": "Login",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "profile": {
+    "title": "My Profile",
+    "roleLabel": "Active role: {{role}}",
+    "loading": "Loading profile data...",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "remove": "Remove",
+    "messages": {
+      "saved": "Profile updated successfully!"
+    },
+    "errors": {
+      "loadFailed": "We couldn't load your profile. Please try again.",
+      "saveFailed": "Couldn't save your changes."
+    },
+    "contractor": {
+      "name": "Full name",
+      "namePlaceholder": "e.g. Alex Smith",
+      "country": "Country",
+      "countryPlaceholder": "e.g. Hungary",
+      "city": "City",
+      "cityPlaceholder": "e.g. Budapest",
+      "company": "Company name",
+      "companyPlaceholder": "e.g. BuildRight Ltd."
+    },
+    "subcontractor": {
+      "bio": "About you",
+      "bioPlaceholder": "Short introduction, experience, specialties...",
+      "services": "Services",
+      "servicesPlaceholder": "Comma-separated list, e.g. Electrical work, Renovation",
+      "skills": "Skills",
+      "skillsPlaceholder": "Comma-separated list, e.g. Wiring, Project management",
+      "area": "Preferred work area",
+      "areaPlaceholder": "e.g. Budapest and surrounding area",
+      "experience": "Years of experience",
+      "experiencePlaceholder": "e.g. 5",
+      "rates": "Hourly rate (HUF)",
+      "ratesPlaceholder": "e.g. 8500",
+      "availability": {
+        "title": "Availability",
+        "hint": "Add the days and time windows when you are available for work.",
+        "required": "Please provide a date and both start and end time.",
+        "invalidRange": "Start time has to be before end time.",
+        "date": "Date",
+        "start": "From",
+        "end": "Until",
+        "add": "Add slot",
+        "empty": "No availability slots saved yet."
+      }
+    },
+    "homeowner": {
+      "name": "Full name",
+      "namePlaceholder": "e.g. Anna Kovacs",
+      "city": "City",
+      "cityPlaceholder": "e.g. Szeged",
+      "investmentMin": "Investment minimum (HUF)",
+      "investmentMinPlaceholder": "e.g. 5000000",
+      "investmentMax": "Investment maximum (HUF)",
+      "investmentMaxPlaceholder": "e.g. 15000000"
+    }
+  },
+  "home": {
+    "heroTitle": "Modern Industrial Solutions",
+    "heroSubtitle": "Build with us – quality and precision",
+    "cta": "Get a Quote",
+    "featuresTitle": "Why Choose Us?",
+    "feature1Title": "Expertise",
+    "feature1Desc": "Our experienced team delivers each project with precision.",
+    "feature2Title": "Reliability",
+    "feature2Desc": "We keep deadlines without compromising quality.",
+    "feature3Title": "Flexibility",
+    "feature3Desc": "We tailor our services to your needs."
+  },
+  "services": {
+    "title": "Our Services",
+    "description": "From industrial project management to technical execution."
+  },
+  "references": {
+    "title": "References",
+    "description": "See our previous works and partners’ testimonials."
+  },
+  "request": {
+    "title": "Request a Quote",
+    "intro": "Fill out the form and we'll contact you soon.",
+    "success": "Thank you! Your request has been sent.",
+    "error": "An error occurred while sending your request."
+  },
+  "form": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone (optional)",
+    "message": "Message",
+    "submit": "Submit Request",
+    "sending": "Sending...",
+    "password": "Password",
+    "errors": {
+      "name": "Please provide a name.",
+      "email": "Invalid email address.",
+      "message": "Please provide a message."
+    }
+  },
+  "login": {
+    "title": "Login",
+    "submit": "Sign In",
+    "noAccount": "Don't have an account?",
+    "registerLink": "Register here"
+  },
+  "register": {
+    "title": "Register",
+    "role": "Role",
+    "homeowner": "Homeowner",
+    "contractor": "Contractor",
+    "subcontractor": "Subcontractor",
+    "submit": "Register",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Sign in here"
+  },
+  "footer": {
+    "disclaimer": "All information on this site is for general purposes only."
+  }
+}
