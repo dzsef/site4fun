@@ -5,6 +5,7 @@ and a timestamp of when they were created.
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy.orm import relationship
 
 from ..db import Base
 
@@ -17,3 +18,22 @@ class User(Base):
     hashed_password: str = Column(String, nullable=False)
     role: str = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    contractor_profile = relationship(
+        "ContractorProfile",
+        back_populates="user",
+        uselist=False,
+        lazy="selectin",
+    )
+    subcontractor_profile = relationship(
+        "SubcontractorProfile",
+        back_populates="user",
+        uselist=False,
+        lazy="selectin",
+    )
+    homeowner_profile = relationship(
+        "HomeownerProfile",
+        back_populates="user",
+        uselist=False,
+        lazy="selectin",
+    )
