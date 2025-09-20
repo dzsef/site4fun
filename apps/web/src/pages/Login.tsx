@@ -44,6 +44,7 @@ const Login: React.FC = () => {
       }
       const result = await res.json();
       localStorage.setItem('token', result.access_token);
+      window.dispatchEvent(new Event('auth-changed'));
       navigate('/');
     } catch (err) {
       console.error(err);
