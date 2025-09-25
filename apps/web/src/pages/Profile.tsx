@@ -19,12 +19,14 @@ type ContractorProfile = {
 };
 
 type SubcontractorProfile = {
+  name: string | null;
   bio: string | null;
   skills: string[];
   services: string[];
   years_of_experience: number | null;
   rates: number | null;
   area: string | null;
+  image_url: string | null;
   availability: AvailabilitySlot[];
 };
 
@@ -60,6 +62,7 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
     return {
       role: 'subcontractor',
       profile: {
+        name: profile.name ?? null,
         bio: profile.bio ?? null,
         skills: Array.isArray(profile.skills) ? profile.skills : [],
         services: Array.isArray(profile.services) ? profile.services : [],
@@ -76,6 +79,7 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
             ? Number(profile.rates)
             : null,
         area: profile.area ?? null,
+        image_url: profile.image_url ?? null,
         availability: Array.isArray(profile.availability)
           ? profile.availability.map((slot) => ({
               date: slot.date,
@@ -238,37 +242,79 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
-        <div className="rounded-md bg-dark-800 px-6 py-4 text-lg font-semibold text-gray-200 shadow-lg">
-          {t('profile.loading')}
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#04070F] via-[#050912] to-[#070C18] text-gray-100">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 top-16 h-[32rem] w-[32rem] rounded-full bg-primary/12 blur-[160px] opacity-80" />
+          <div className="absolute right-[-20rem] top-1/3 h-[40rem] w-[40rem] rounded-full bg-sky-500/14 blur-[210px]" />
+        </div>
+        <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+          <div className="flex h-40 w-40 items-center justify-center rounded-full border border-white/8 bg-[#0B111E]/70 shadow-[0_45px_140px_rgba(3,7,18,0.7)] backdrop-blur-2xl">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/15 border-t-primary" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-12">
-      <div className="mb-6 flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-white">{t('profile.title')}</h1>
-        {profileData && (
-          <p className="text-sm uppercase tracking-widest text-primary">
-            {t('profile.roleLabel', { role: roleLabel })}
-          </p>
-        )}
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#04070F] via-[#050912] to-[#070C18] text-gray-100">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 top-12 h-[34rem] w-[34rem] rounded-full bg-primary/14 blur-[170px]" />
+        <div className="absolute right-[-22rem] top-1/3 h-[46rem] w-[46rem] rounded-full bg-indigo-500/14 blur-[230px]" />
+        <div className="absolute left-1/2 bottom-[-16rem] h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-emerald-500/14 blur-[200px]" />
       </div>
-      {error && (
-        <div className="mb-6 rounded-md border border-red-500/40 bg-red-900/20 px-4 py-3 text-red-200">
-          {error}
+      <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-20">
+        <header className="space-y-6">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-primary/70 shadow-[0_0_44px_rgba(245,184,0,0.18)]">
+            {t('profile.tagline')}
+          </span>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="space-y-3">
+              <h1 className="text-4xl font-semibold text-white md:text-5xl">
+                {t('profile.title')}
+              </h1>
+              {profileData && (
+                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/50">
+                  {t('profile.roleLabel', { role: roleLabel })}
+                </p>
+              )}
+            </div>
+            {profileData && (
+              <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-[#0B111E]/90 px-6 py-4 text-sm text-white/80 shadow-[0_32px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+                <span className="absolute -top-10 right-[-20%] h-24 w-24 rounded-full bg-primary/15 blur-3xl" />
+                <p className="relative z-10 max-w-sm leading-relaxed text-white/75">
+                  {t('profile.subtitle')}
+                </p>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div className="space-y-5">
+          {error && (
+            <div className="relative overflow-hidden rounded-3xl border border-rose-500/25 bg-rose-500/10 px-6 py-4 text-xs text-rose-100 shadow-[0_26px_80px_rgba(255,0,94,0.35)]">
+              <span className="absolute inset-0 bg-gradient-to-r from-rose-500/20 via-transparent to-transparent opacity-40" />
+              <span className="relative z-10">{error}</span>
+            </div>
+          )}
+          {successMessage && (
+            <div className="relative overflow-hidden rounded-3xl border border-emerald-500/25 bg-emerald-500/10 px-6 py-4 text-xs text-emerald-100 shadow-[0_26px_80px_rgba(16,185,129,0.35)]">
+              <span className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-transparent opacity-40" />
+              <span className="relative z-10">{successMessage}</span>
+            </div>
+          )}
         </div>
-      )}
-      {successMessage && (
-        <div className="mb-6 rounded-md border border-green-500/40 bg-green-900/20 px-4 py-3 text-green-200">
-          {successMessage}
+
+        <div className="relative overflow-hidden rounded-[2.75rem] border border-white/8 bg-[#0A0F1B]/95 p-8 shadow-[0_55px_160px_rgba(3,7,18,0.85)] backdrop-blur-2xl md:p-12">
+          <div className="pointer-events-none absolute inset-0 opacity-65">
+            <div className="absolute -top-24 right-[-18%] h-56 w-56 rounded-full bg-primary/16 blur-3xl" />
+            <div className="absolute -bottom-24 left-[-10%] h-60 w-60 rounded-full bg-sky-500/14 blur-3xl" />
+          </div>
+          <div className="relative z-10 space-y-12">
+            {renderForm()}
+          </div>
         </div>
-      )}
-      <div className="rounded-2xl border border-dark-700 bg-dark-800/80 p-6 shadow-xl backdrop-blur">
-        {renderForm()}
-      </div>
+      </section>
     </div>
   );
 };
@@ -323,34 +369,36 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="space-y-6">
-      <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <InputField
-          label={t('profile.contractor.name')}
-          placeholder={t('profile.contractor.namePlaceholder')}
-          {...register('name')}
-        />
-        <InputField
-          label={t('profile.contractor.country')}
-          placeholder={t('profile.contractor.countryPlaceholder')}
-          {...register('country')}
-        />
-        <InputField
-          label={t('profile.contractor.city')}
-          placeholder={t('profile.contractor.cityPlaceholder')}
-          {...register('city')}
-        />
-        <InputField
-          label={t('profile.contractor.company')}
-          placeholder={t('profile.contractor.companyPlaceholder')}
-          {...register('company_name')}
-        />
-      </fieldset>
+    <form onSubmit={handleSubmit(submit)} className="space-y-10">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
+        <fieldset className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <InputField
+            label={t('profile.contractor.name')}
+            placeholder={t('profile.contractor.namePlaceholder')}
+            {...register('name')}
+          />
+          <InputField
+            label={t('profile.contractor.country')}
+            placeholder={t('profile.contractor.countryPlaceholder')}
+            {...register('country')}
+          />
+          <InputField
+            label={t('profile.contractor.city')}
+            placeholder={t('profile.contractor.cityPlaceholder')}
+            {...register('city')}
+          />
+          <InputField
+            label={t('profile.contractor.company')}
+            placeholder={t('profile.contractor.companyPlaceholder')}
+            {...register('company_name')}
+          />
+        </fieldset>
+      </div>
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={saving || !isDirty}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 font-semibold text-dark-900 shadow transition-transform duration-300 ease-out hover:scale-[1.02] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_25px_60px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
@@ -366,10 +414,12 @@ type SubcontractorProfileFormProps = {
 };
 
 type SubcontractorFormValues = {
+  name: string;
   bio: string;
   area: string;
   years_of_experience: string;
   rates: string;
+  image_url: string;
 };
 
 const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ data, onSave, saving }) => {
@@ -381,10 +431,12 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
     formState: { isDirty },
   } = useForm<SubcontractorFormValues>({
     defaultValues: {
+      name: data.name ?? '',
       bio: data.bio ?? '',
       area: data.area ?? '',
       years_of_experience: data.years_of_experience?.toString() ?? '',
       rates: data.rates?.toString() ?? '',
+      image_url: data.image_url ?? '',
     },
   });
   const originalSkills = useMemo(() => data.skills.join(', '), [data.skills]);
@@ -407,10 +459,12 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
 
   useEffect(() => {
     reset({
+      name: data.name ?? '',
       bio: data.bio ?? '',
       area: data.area ?? '',
       years_of_experience: data.years_of_experience?.toString() ?? '',
       rates: data.rates?.toString() ?? '',
+      image_url: data.image_url ?? '',
     });
     setSkillsInput(data.skills.join(', '));
     setServicesInput(data.services.join(', '));
@@ -445,12 +499,14 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
     const yearsValue = values.years_of_experience ? Number(values.years_of_experience) : null;
     const ratesValue = values.rates ? Number(values.rates) : null;
     onSave({
+      name: values.name || null,
       bio: values.bio || null,
       skills: parseList(skillsInput),
       services: parseList(servicesInput),
       years_of_experience: Number.isNaN(yearsValue) ? null : yearsValue,
       rates: Number.isNaN(ratesValue) ? null : ratesValue,
       area: values.area || null,
+      image_url: values.image_url ? values.image_url.trim() : null,
       availability,
     });
   };
@@ -467,138 +523,165 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
     currentAvailabilitySignature !== originalAvailabilitySignature;
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="space-y-8">
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <TextAreaField
-          label={t('profile.subcontractor.bio')}
-          placeholder={t('profile.subcontractor.bioPlaceholder')}
-          rows={5}
-          {...register('bio')}
-        />
-        <TextAreaField
-          label={t('profile.subcontractor.services')}
-          placeholder={t('profile.subcontractor.servicesPlaceholder')}
-          rows={5}
-          value={servicesInput}
-          onChange={(event) => setServicesInput(event.target.value)}
-        />
-        <TextAreaField
-          label={t('profile.subcontractor.skills')}
-          placeholder={t('profile.subcontractor.skillsPlaceholder')}
-          rows={5}
-          value={skillsInput}
-          onChange={(event) => setSkillsInput(event.target.value)}
-        />
-        <div className="grid grid-cols-1 gap-4">
-          <InputField
-            label={t('profile.subcontractor.area')}
-            placeholder={t('profile.subcontractor.areaPlaceholder')}
-            {...register('area')}
-          />
-          <InputField
-            label={t('profile.subcontractor.experience')}
-            type="number"
-            min={0}
-            placeholder={t('profile.subcontractor.experiencePlaceholder')}
-            {...register('years_of_experience')}
-          />
-          <InputField
-            label={t('profile.subcontractor.rates')}
-            type="number"
-            min={0}
-            step="0.01"
-            placeholder={t('profile.subcontractor.ratesPlaceholder')}
-            {...register('rates')}
-          />
+    <form onSubmit={handleSubmit(submit)} className="space-y-10">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+          <div className="grid grid-cols-1 gap-6">
+            <InputField
+              label={t('profile.subcontractor.name')}
+              placeholder={t('profile.subcontractor.namePlaceholder')}
+              {...register('name')}
+            />
+            <InputField
+              label={t('profile.subcontractor.image')}
+              placeholder={t('profile.subcontractor.imagePlaceholder')}
+              type="url"
+              {...register('image_url')}
+            />
+            <TextAreaField
+              label={t('profile.subcontractor.bio')}
+              placeholder={t('profile.subcontractor.bioPlaceholder')}
+              rows={5}
+              {...register('bio')}
+            />
+          </div>
         </div>
-      </section>
+        <div className="grid gap-6">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+            <TextAreaField
+              label={t('profile.subcontractor.services')}
+              placeholder={t('profile.subcontractor.servicesPlaceholder')}
+              rows={5}
+              value={servicesInput}
+              onChange={(event) => setServicesInput(event.target.value)}
+            />
+            <TextAreaField
+              label={t('profile.subcontractor.skills')}
+              placeholder={t('profile.subcontractor.skillsPlaceholder')}
+              rows={5}
+              value={skillsInput}
+              onChange={(event) => setSkillsInput(event.target.value)}
+            />
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <InputField
+                label={t('profile.subcontractor.area')}
+                placeholder={t('profile.subcontractor.areaPlaceholder')}
+                {...register('area')}
+              />
+              <InputField
+                label={t('profile.subcontractor.experience')}
+                type="number"
+                min={0}
+                placeholder={t('profile.subcontractor.experiencePlaceholder')}
+                {...register('years_of_experience')}
+              />
+              <InputField
+                label={t('profile.subcontractor.rates')}
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder={t('profile.subcontractor.ratesPlaceholder')}
+                {...register('rates')}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <section>
-        <h2 className="text-lg font-semibold text-white">
-          {t('profile.subcontractor.availability.title')}
-        </h2>
-        <p className="mb-4 text-sm text-gray-400">{t('profile.subcontractor.availability.hint')}</p>
-        {availabilityError && (
-          <p className="mb-3 text-sm text-red-300">{availabilityError}</p>
-        )}
-        <div className="flex flex-col gap-4 rounded-md border border-dark-700 bg-dark-900/40 p-4 shadow-inner md:flex-row md:items-end">
-          <div className="flex flex-1 flex-col gap-2">
-            <label className="text-sm font-medium text-gray-300">
-              {t('profile.subcontractor.availability.date')}
-              <input
-                type="date"
-                className="mt-1 w-full rounded-md border border-dark-600 bg-dark-700 px-3 py-2 text-gray-100 focus:border-primary focus:outline-none"
-                value={newSlot.date}
-                onChange={(event) => setNewSlot((prev) => ({ ...prev, date: event.target.value }))}
-              />
-            </label>
-          </div>
-          <div className="flex flex-1 flex-col gap-2">
-            <label className="text-sm font-medium text-gray-300">
-              {t('profile.subcontractor.availability.start')}
-              <input
-                type="time"
-                className="mt-1 w-full rounded-md border border-dark-600 bg-dark-700 px-3 py-2 text-gray-100 focus:border-primary focus:outline-none"
-                value={newSlot.start_time}
-                onChange={(event) => setNewSlot((prev) => ({ ...prev, start_time: event.target.value }))}
-              />
-            </label>
-          </div>
-          <div className="flex flex-1 flex-col gap-2">
-            <label className="text-sm font-medium text-gray-300">
-              {t('profile.subcontractor.availability.end')}
-              <input
-                type="time"
-                className="mt-1 w-full rounded-md border border-dark-600 bg-dark-700 px-3 py-2 text-gray-100 focus:border-primary focus:outline-none"
-                value={newSlot.end_time}
-                onChange={(event) => setNewSlot((prev) => ({ ...prev, end_time: event.target.value }))}
-              />
-            </label>
-          </div>
+      <div className="space-y-6 rounded-[2.5rem] border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-8">
+        <header className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.32em] text-white/70">
+            {t('profile.subcontractor.availability.title')}
+          </h2>
+          <p className="text-sm text-white/65">
+            {t('profile.subcontractor.availability.hint')}
+          </p>
+        </header>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(4,minmax(0,1fr))]">
+          <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+            {t('profile.subcontractor.availability.date')}
+            <input
+              type="date"
+              className="rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
+              value={newSlot.date}
+              onChange={(event) => setNewSlot((prev) => ({ ...prev, date: event.target.value }))}
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+            {t('profile.subcontractor.availability.start')}
+            <input
+              type="time"
+              className="rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
+              value={newSlot.start_time}
+              onChange={(event) =>
+                setNewSlot((prev) => ({ ...prev, start_time: event.target.value }))
+              }
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+            {t('profile.subcontractor.availability.end')}
+            <input
+              type="time"
+              className="rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
+              value={newSlot.end_time}
+              onChange={(event) =>
+                setNewSlot((prev) => ({ ...prev, end_time: event.target.value }))
+              }
+            />
+          </label>
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 font-semibold text-dark-900 shadow hover:scale-[1.02] hover:shadow-lg"
             onClick={addSlot}
+            className="mt-6 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-4 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_24px_60px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02]"
           >
             {t('profile.subcontractor.availability.add')}
           </button>
         </div>
-        <ul className="mt-4 space-y-3">
-          {availability.length === 0 && (
-            <li className="rounded-md border border-dashed border-dark-600 bg-dark-900/40 px-4 py-3 text-sm text-gray-400">
-              {t('profile.subcontractor.availability.empty')}
-            </li>
-          )}
-          {availability.map((slot, index) => (
-            <li
-              key={`${slot.date}-${slot.start_time}-${slot.end_time}-${index}`}
-              className="flex flex-col gap-2 rounded-md border border-dark-600 bg-dark-900/60 px-4 py-3 shadow md:flex-row md:items-center md:justify-between"
-            >
-              <div>
-                <p className="font-semibold text-primary">
-                  {new Date(slot.date).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-gray-300">
-                  {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="self-start rounded-md border border-red-500/40 px-3 py-1 text-sm text-red-200 transition hover:bg-red-500/20"
-                onClick={() => removeSlot(index)}
+        {availabilityError && (
+          <p className="text-xs text-rose-300">{availabilityError}</p>
+        )}
+        {availability.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-white/15 p-5 text-sm text-white/60">
+            {t('profile.subcontractor.availability.empty')}
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {availability.map((slot, index) => (
+              <li
+                key={`${slot.date}-${slot.start_time}-${slot.end_time}-${index}`}
+                className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#0C1322] px-5 py-4 shadow-[0_22px_70px_rgba(3,7,18,0.55)]"
               >
-                {t('profile.remove')}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+                <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                  <span className="absolute -left-10 top-1/2 h-20 w-20 -translate-y-1/2 rounded-full bg-primary/18 blur-3xl" />
+                </span>
+                <div className="relative z-10 text-sm text-white/75">
+                  <p className="text-base font-semibold text-white">
+                    {slot.date}
+                  </p>
+                  <p>
+                    {slot.start_time} - {slot.end_time}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeSlot(index)}
+                  className="relative z-10 inline-flex items-center rounded-full border border-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition-colors duration-200 hover:border-rose-400 hover:text-rose-300"
+                >
+                  {t('profile.remove')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={saving || !isFormDirty}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 font-semibold text-dark-900 shadow transition-transform duration-300 ease-out hover:scale-[1.02] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
@@ -607,18 +690,6 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
   );
 };
 
-type HomeownerProfileFormProps = {
-  data: HomeownerProfile;
-  onSave: (update: HomeownerProfile) => void | Promise<void>;
-  saving: boolean;
-};
-
-type HomeownerFormValues = {
-  name: string;
-  city: string;
-  investment_min: string;
-  investment_max: string;
-};
 
 const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSave, saving }) => {
   const { t } = useTranslation();
@@ -657,40 +728,42 @@ const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSav
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="space-y-6">
-      <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <InputField
-          label={t('profile.homeowner.name')}
-          placeholder={t('profile.homeowner.namePlaceholder')}
-          {...register('name')}
-        />
-        <InputField
-          label={t('profile.homeowner.city')}
-          placeholder={t('profile.homeowner.cityPlaceholder')}
-          {...register('city')}
-        />
-        <InputField
-          label={t('profile.homeowner.investmentMin')}
-          type="number"
-          min={0}
-          step="1000"
-          placeholder={t('profile.homeowner.investmentMinPlaceholder')}
-          {...register('investment_min')}
-        />
-        <InputField
-          label={t('profile.homeowner.investmentMax')}
-          type="number"
-          min={0}
-          step="1000"
-          placeholder={t('profile.homeowner.investmentMaxPlaceholder')}
-          {...register('investment_max')}
-        />
-      </fieldset>
+    <form onSubmit={handleSubmit(submit)} className="space-y-10">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+        <fieldset className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <InputField
+            label={t('profile.homeowner.name')}
+            placeholder={t('profile.homeowner.namePlaceholder')}
+            {...register('name')}
+          />
+          <InputField
+            label={t('profile.homeowner.city')}
+            placeholder={t('profile.homeowner.cityPlaceholder')}
+            {...register('city')}
+          />
+          <InputField
+            label={t('profile.homeowner.investmentMin')}
+            type="number"
+            min={0}
+            step="1000"
+            placeholder={t('profile.homeowner.investmentMinPlaceholder')}
+            {...register('investment_min')}
+          />
+          <InputField
+            label={t('profile.homeowner.investmentMax')}
+            type="number"
+            min={0}
+            step="1000"
+            placeholder={t('profile.homeowner.investmentMaxPlaceholder')}
+            {...register('investment_max')}
+          />
+        </fieldset>
+      </div>
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={saving || !isDirty}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 font-semibold text-dark-900 shadow transition-transform duration-300 ease-out hover:scale-[1.02] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
@@ -699,17 +772,14 @@ const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSav
   );
 };
 
-type InputFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-};
 
 const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
   ({ label, className = '', ...props }, ref) => (
-    <label className="text-sm font-medium text-gray-300">
+    <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
       {label}
       <input
         ref={ref}
-        className={`mt-1 w-full rounded-md border border-dark-600 bg-dark-700 px-3 py-2 text-gray-100 focus:border-primary focus:outline-none ${className}`}
+        className={`w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/35 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition ${className}`}
         {...props}
       />
     </label>
@@ -723,11 +793,11 @@ type TextAreaFieldProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
 
 const TextAreaField = React.forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(
   ({ label, className = '', ...props }, ref) => (
-    <label className="text-sm font-medium text-gray-300">
+    <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
       {label}
       <textarea
         ref={ref}
-        className={`mt-1 w-full rounded-md border border-dark-600 bg-dark-700 px-3 py-2 text-gray-100 focus:border-primary focus:outline-none ${className}`}
+        className={`w-full rounded-2xl border border-white/10 bg-[#070B14]/75 px-4 py-3 text-sm text-white placeholder-white/35 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition ${className}`}
         {...props}
       />
     </label>
