@@ -20,6 +20,7 @@ class ContractorProfileData(BaseModel):
     country: Optional[str] = None
     city: Optional[str] = None
     company_name: Optional[str] = None
+    image_url: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -45,6 +46,7 @@ class HomeownerProfileData(BaseModel):
     city: Optional[str] = None
     investment_min: Optional[float] = None
     investment_max: Optional[float] = None
+    image_url: Optional[str] = None
 
     class Config:
         orm_mode = True

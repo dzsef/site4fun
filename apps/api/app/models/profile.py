@@ -24,6 +24,7 @@ class ContractorProfile(Base):
     country = Column(String, nullable=True)
     city = Column(String, nullable=True)
     company_name = Column(String, nullable=True)
+    image_path = Column(String, nullable=True)
 
     user = relationship("User", back_populates="contractor_profile")
 
@@ -39,7 +40,7 @@ class SubcontractorProfile(Base):
     years_of_experience = Column(Integer, nullable=True)
     rates = Column(Numeric(10, 2), nullable=True)
     area = Column(String, nullable=True)
-    image_url = Column(String, nullable=True)
+    image_path = Column(String, nullable=True)
 
     user = relationship("User", back_populates="subcontractor_profile")
     availability = relationship(
@@ -74,5 +75,6 @@ class HomeownerProfile(Base):
     city = Column(String, nullable=True)
     investment_min = Column(Numeric(12, 2), nullable=True)
     investment_max = Column(Numeric(12, 2), nullable=True)
+    image_path = Column(String, nullable=True)
 
     user = relationship("User", back_populates="homeowner_profile")

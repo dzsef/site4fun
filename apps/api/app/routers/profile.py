@@ -1,9 +1,9 @@
 """Profile management routes for authenticated users."""
 
 from decimal import Decimal
-from typing import List, Sequence
+from typing import List, Sequence, Union
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -28,6 +28,7 @@ from ..schemas.profile import (
     SubcontractorProfileEnvelope,
     SubcontractorDirectoryCard,
 )
+from ..utils.media import image_path_to_url, save_profile_image
 
 router = APIRouter()
 
@@ -37,7 +38,13 @@ async def _contractor_response(user: User, db: AsyncSession) -> ContractorProfil
     if profile is None:
         data = ContractorProfileData()
     else:
-        data = ContractorProfileData.from_orm(profile)
+        data = ContractorProfileData(
+            name=profile.name,
+            country=profile.country,
+            city=profile.city,
+            company_name=profile.company_name,
+            image_url=image_path_to_url(profile.image_path),
+        )
     return ContractorProfileEnvelope(role="contractor", profile=data)
 
 
@@ -60,7 +67,7 @@ async def _subcontractor_response(user: User, db: AsyncSession) -> Subcontractor
             years_of_experience=profile.years_of_experience,
             rates=float(profile.rates) if profile.rates is not None else None,
             area=profile.area,
-            image_url=profile.image_url,
+            image_url=image_path_to_url(profile.image_path),
             availability=[AvailabilitySlot.from_orm(slot) for slot in slots] if slots else [],
         )
     return SubcontractorProfileEnvelope(role="subcontractor", profile=data)
@@ -76,6 +83,7 @@ async def _homeowner_response(user: User, db: AsyncSession) -> HomeownerProfileE
             city=profile.city,
             investment_min=float(profile.investment_min) if profile.investment_min is not None else None,
             investment_max=float(profile.investment_max) if profile.investment_max is not None else None,
+            image_url=image_path_to_url(profile.image_path),
         )
     return HomeownerProfileEnvelope(role="homeowner", profile=data)
 
@@ -125,6 +133,7 @@ async def update_profile(
         profile.country = payload.profile.country
         profile.city = payload.profile.city
         profile.company_name = payload.profile.company_name
+        # Preserve existing image_path for contractor profiles; updates happen via the avatar endpoint.
         await db.commit()
         await db.refresh(profile)
         return await _contractor_response(current_user, db)
@@ -154,7 +163,6 @@ async def update_profile(
         profile.years_of_experience = data.years_of_experience
         profile.rates = Decimal(str(data.rates)) if data.rates is not None else None
         profile.area = data.area.strip() if data.area else None
-        profile.image_url = data.image_url.strip() if data.image_url else None
 
         result = await db.execute(
             select(SubcontractorAvailability).where(SubcontractorAvailability.profile_id == current_user.id)
@@ -194,6 +202,7 @@ async def update_profile(
         profile.city = data.city
         profile.investment_min = Decimal(str(data.investment_min)) if data.investment_min is not None else None
         profile.investment_max = Decimal(str(data.investment_max)) if data.investment_max is not None else None
+        # Image updates for homeowners happen via the avatar endpoint.
         await db.commit()
         await db.refresh(profile)
         return await _homeowner_response(current_user, db)
@@ -221,9 +230,52 @@ async def list_subcontractors(
             years_of_experience=profile.years_of_experience,
             skills=list(profile.skills or []),
             services=list(profile.services or []),
-            image_url=profile.image_url,
+            image_url=image_path_to_url(profile.image_path),
         )
         for profile in profiles
     ]
 
     return cards
+
+
+async def _get_or_create_profile(
+    user: User, db: AsyncSession
+) -> Union[ContractorProfile, SubcontractorProfile, HomeownerProfile]:
+    if user.role == "contractor":
+        profile = await db.get(ContractorProfile, user.id)
+        if profile is None:
+            profile = ContractorProfile(user_id=user.id)
+            db.add(profile)
+            await db.flush()
+        return profile
+
+    if user.role == "subcontractor":
+        profile = await db.get(SubcontractorProfile, user.id)
+        if profile is None:
+            profile = SubcontractorProfile(user_id=user.id, skills=[], services=[])
+            db.add(profile)
+            await db.flush()
+        return profile
+
+    if user.role == "homeowner":
+        profile = await db.get(HomeownerProfile, user.id)
+        if profile is None:
+            profile = HomeownerProfile(user_id=user.id)
+            db.add(profile)
+            await db.flush()
+        return profile
+
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported role")
+
+
+@router.post("/me/avatar", response_model=ProfileResponse)
+async def upload_profile_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ProfileResponse:
+    profile = await _get_or_create_profile(current_user, db)
+    image_path = await save_profile_image(current_user.id, file)
+    profile.image_path = image_path
+    await db.commit()
+    return await _serialize_profile(current_user, db)
