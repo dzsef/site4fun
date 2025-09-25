@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 // We avoid useMutation here to prevent version-related errors
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 // Validation schema for login
@@ -14,9 +14,24 @@ const loginSchema = z.object({
 
 type LoginData = z.infer<typeof loginSchema>;
 
+type HighlightKey = 'craft' | 'clarity' | 'momentum';
+const highlightKeys: HighlightKey[] = ['craft', 'clarity', 'momentum'];
+
 const Login: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const rawRole = searchParams.get('role');
+  const selectedRole =
+    rawRole === 'homeowner' || rawRole === 'contractor' || rawRole === 'subcontractor'
+      ? rawRole
+      : null;
+  const selectedRoleLabel = selectedRole ? t(`home.personas.${selectedRole}.title`) : null;
+  const nextParam = searchParams.get('next');
+  const redirectTarget =
+    nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/';
+
   const {
     register: registerField,
     handleSubmit,
@@ -45,7 +60,7 @@ const Login: React.FC = () => {
       const result = await res.json();
       localStorage.setItem('token', result.access_token);
       window.dispatchEvent(new Event('auth-changed'));
-      navigate('/');
+      navigate(redirectTarget, { replace: true });
     } catch (err) {
       console.error(err);
       alert((err as Error).message || 'Login failed');
@@ -53,44 +68,136 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-12 px-4 max-w-md">
-      <h1 className="text-3xl font-bold mb-6">{t('login.title')}</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block font-medium">{t('form.email')}</label>
-          <input
-            {...registerField('email')}
-            className="w-full rounded-md border-gray-600 bg-dark-700 p-2 text-gray-100"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email.message}</p>
-          )}
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#050810] via-[#050810] to-[#080C16] text-gray-100">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-28 top-6 h-[32rem] w-[32rem] rounded-full bg-primary/12 blur-[150px]" />
+        <div className="absolute right-[-20rem] top-1/4 h-[44rem] w-[44rem] rounded-full bg-sky-500/12 blur-[220px]" />
+        <div className="absolute left-1/2 top-2/3 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-emerald-500/12 blur-[200px]" />
+      </div>
+
+      <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-14 px-4 py-20 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex max-w-xl flex-col gap-10">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.42em] text-primary/70 shadow-[0_0_44px_rgba(245,184,0,0.18)]">
+            {t('login.tagline')}
+          </span>
+          <div className="space-y-6">
+            <h1 className="text-4xl font-semibold text-white md:text-5xl">
+              {t('login.title')}
+            </h1>
+            <p className="text-lg text-gray-300/85 md:text-xl">
+              {t('login.subtitle')}
+            </p>
+          </div>
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {highlightKeys.map((key, index) => (
+              <li
+                key={key}
+                className="group relative overflow-hidden rounded-3xl border border-white/5 bg-[#0C111F] p-5 shadow-[0_28px_80px_rgba(3,7,18,0.65)] backdrop-blur-xl transition-transform duration-500 ease-[cubic-bezier(.22,1.61,.36,1)] hover:-translate-y-2 hover:scale-[1.015]"
+              >
+                <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                  <span
+                    className={`absolute -left-10 top-1/2 h-24 w-24 -translate-y-1/2 rounded-full blur-3xl ${
+                      index === 0
+                        ? 'bg-primary/25'
+                        : index === 1
+                        ? 'bg-sky-400/20'
+                        : 'bg-emerald-400/20'
+                    }`}
+                  />
+                </span>
+                <div className="relative z-10 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.32em] text-white/65">
+                    {t(`login.highlights.${key}.title`)}
+                  </p>
+                  <p className="text-sm text-white/75">
+                    {t(`login.highlights.${key}.description`)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div>
-          <label className="block font-medium">{t('form.password')}</label>
-          <input
-            type="password"
-            {...registerField('password')}
-            className="w-full rounded-md border-gray-600 bg-dark-700 p-2 text-gray-100"
-          />
-          {errors.password && (
-            <p className="text-red-500 text-sm">{errors.password.message}</p>
-          )}
+
+        <div className="relative w-full max-w-xl">
+          <div className="absolute inset-0 -translate-y-6 scale-105 rounded-[2.75rem] bg-gradient-to-br from-primary/15 via-transparent to-transparent blur-3xl opacity-70" />
+          <div className="relative overflow-hidden rounded-[2.5rem] border border-white/8 bg-[#0B111E]/95 p-8 shadow-[0_55px_150px_rgba(2,5,14,0.9)] backdrop-blur-2xl md:p-10">
+            <div className="pointer-events-none absolute inset-0 opacity-70">
+              <div className="absolute -top-24 right-[-18%] h-56 w-56 rounded-full bg-primary/18 blur-3xl" />
+              <div className="absolute -bottom-28 left-[-12%] h-60 w-60 rounded-full bg-sky-500/12 blur-3xl" />
+            </div>
+            <div className="relative z-10 space-y-8">
+              {selectedRoleLabel ? (
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 shadow-[0_24px_60px_rgba(4,8,20,0.6)]">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <span className="text-sm font-medium">
+                      {t('login.roleContext', { role: selectedRoleLabel })}
+                    </span>
+                    <Link
+                      to="/"
+                      className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-primary transition-colors duration-300 hover:bg-white/10"
+                    >
+                      {t('login.changeRole')}
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/40">
+                  {t('profileSidebar.collapsedLabel')}
+                </span>
+              )}
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('form.email')}
+                  </label>
+                  <input
+                    {...registerField('email')}
+                    className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/40 shadow-[0_24px_70px_rgba(2,5,14,0.7)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                  />
+                  {errors.email && (
+                    <p className="text-xs font-medium text-rose-300">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('form.password')}
+                  </label>
+                  <input
+                    type="password"
+                    {...registerField('password')}
+                    className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/40 shadow-[0_24px_70px_rgba(2,5,14,0.7)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                  />
+                  {errors.password && (
+                    <p className="text-xs font-medium text-rose-300">
+                      {errors.password.message}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={formState.isSubmitting}
+                  className="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {formState.isSubmitting ? t('form.sending') : t('login.submit')}
+                </button>
+              </form>
+
+              <p className="text-center text-xs text-white/55">
+                {t('login.noAccount')}{' '}
+                <Link
+                  to="/register"
+                  className="font-semibold text-primary transition hover:text-white"
+                >
+                  {t('login.registerLink')}
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
-        <button
-          type="submit"
-          disabled={formState.isSubmitting}
-          className="w-full rounded-md bg-primary px-4 py-2 font-semibold text-dark-900 hover:bg-yellow-600 disabled:opacity-50"
-        >
-          {formState.isSubmitting ? t('form.sending') : t('login.submit')}
-        </button>
-      </form>
-      <p className="mt-4">
-        {t('login.noAccount')} {''}
-        <Link to="/register" className="text-primary underline">
-          {t('login.registerLink')}
-        </Link>
-      </p>
+      </section>
     </div>
   );
 };
