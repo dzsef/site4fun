@@ -1,20 +1,34 @@
 {
   "nav": {
     "home": "Home",
-    "services": "Services",
-    "references": "References",
-    "request": "Request Quote",
     "login": "Login",
     "profile": "Profile",
     "logout": "Log out"
   },
+  "profileSidebar": {
+    "signedIn": "Signed in as",
+    "collapsedLabel": "Account",
+    "expand": "Open account panel",
+    "collapse": "Collapse account panel",
+    "loading": "Refreshing profile...",
+    "error": "We couldn't load your profile details.",
+    "viewProfile": "Open profile",
+    "emptyName": "Unnamed profile",
+    "roles": {
+      "homeowner": "Homeowner workspace",
+      "contractor": "Contractor workspace",
+      "subcontractor": "Subcontractor workspace"
+    }
+  },
   "profile": {
+    "tagline": "Personalised control centre",
     "title": "My Profile",
     "roleLabel": "Active role: {{role}}",
     "loading": "Loading profile data...",
     "save": "Save changes",
     "saving": "Saving...",
     "remove": "Remove",
+    "subtitle": "Fine-tune the data that powers your exposure, invites, and crew matching.",
     "messages": {
       "saved": "Profile updated successfully!"
     },
@@ -33,6 +47,8 @@
       "companyPlaceholder": "e.g. BuildRight Ltd."
     },
     "subcontractor": {
+      "name": "Display name",
+      "namePlaceholder": "e.g. Skyline Renovations",
       "bio": "About you",
       "bioPlaceholder": "Short introduction, experience, specialties...",
       "services": "Services",
@@ -45,6 +61,8 @@
       "experiencePlaceholder": "e.g. 5",
       "rates": "Hourly rate (HUF)",
       "ratesPlaceholder": "e.g. 8500",
+      "image": "Portfolio image URL",
+      "imagePlaceholder": "https://...",
       "availability": {
         "title": "Availability",
         "hint": "Add the days and time windows when you are available for work.",
@@ -69,30 +87,92 @@
     }
   },
   "home": {
-    "heroTitle": "Modern Industrial Solutions",
-    "heroSubtitle": "Build with us – quality and precision",
-    "cta": "Get a Quote",
-    "featuresTitle": "Why Choose Us?",
-    "feature1Title": "Expertise",
-    "feature1Desc": "Our experienced team delivers each project with precision.",
-    "feature2Title": "Reliability",
-    "feature2Desc": "We keep deadlines without compromising quality.",
-    "feature3Title": "Flexibility",
-    "feature3Desc": "We tailor our services to your needs."
+    "tagline": "Premium collaboration hub",
+    "hero": {
+      "title": "Shape construction partnerships with clarity",
+      "subtitle": "Choose the journey that fits your role and access tools designed for transparent, modern project delivery."
+    },
+    "personas": {
+      "homeowner": {
+        "title": "Homeowner",
+        "description": "Plan confidently, discover vetted teams, and keep every milestone aligned with your vision.",
+        "cta": "Continue as homeowner"
+      },
+      "contractor": {
+        "title": "Contractor",
+        "description": "Coordinate subcontractors, budgets, and progress in one intuitive command centre.",
+        "cta": "Continue as contractor"
+      },
+      "subcontractor": {
+        "title": "Subcontractor",
+        "description": "Showcase your craft, receive precise briefs, and stay synced with the site in real time.",
+        "cta": "Continue as subcontractor"
+      }
+    },
+    "benefits": {
+      "trust": {
+        "title": "Realtime transparency",
+        "description": "Budgets, approvals, and updates flow through one shared timeline visible to everyone involved."
+      },
+      "tools": {
+        "title": "Tools built for roles",
+        "description": "Dashboards adapt to your responsibilities, keeping focus on the decisions that matter most."
+      },
+      "network": {
+        "title": "Connected network",
+        "description": "Homeowners, contractors, and crews meet within a curated ecosystem of dedicated professionals."
+      },
+      "footer": "Osus aligns expectations from the first sketch to handover, so every role pulls in the same direction."
+    }
   },
-  "services": {
-    "title": "Our Services",
-    "description": "From industrial project management to technical execution."
+  "contractorHub": {
+    "tagline": "Contractor mission control",
+    "title": "Choose the path that moves your projects forward",
+    "subtitle": "Track open homeowner requests or assemble your next on-site crew. Each workspace keeps communication transparent and timelines accountable.",
+    "cards": {
+      "jobs": {
+        "title": "Discover available homeowner projects",
+        "description": "Browse curated opportunities where homeowners are still searching for their lead contractor. Evaluate scope, timelines, and budgets at a glance before taking the lead.",
+        "cta": "Review opportunities"
+      },
+      "crew": {
+        "title": "Build the crew you can trust",
+        "description": "Search the subcontractor talent cloud with experience badges, availability windows, and verified references to keep your schedule on track.",
+        "cta": "Explore specialists"
+      },
+      "post": {
+        "title": "Create a job posting",
+        "description": "Launch a detailed scope with milestones, budget signals, and required certifications. Subcontractors can apply instantly so you assemble the best-fit team without delays.",
+        "cta": "Post a job"
+      }
+    }
   },
-  "references": {
-    "title": "References",
-    "description": "See our previous works and partners’ testimonials."
-  },
-  "request": {
-    "title": "Request a Quote",
-    "intro": "Fill out the form and we'll contact you soon.",
-    "success": "Thank you! Your request has been sent.",
-    "error": "An error occurred while sending your request."
+  "contractorCrew": {
+    "back": "Back",
+    "tagline": "Trusted crew directory",
+    "title": "Browse subcontractor specialists ready to join your next build",
+    "subtitle": "Filter by focus area, experience, and skillset. Every profile is structured so you can line up crews without endless calls.",
+    "empty": "No subcontractor profiles are visible yet. Encourage your crew to complete their profile details!",
+    "errors": {
+      "forbidden": "Only contractor accounts can view the crew directory.",
+      "generic": "We couldn't load subcontractor profiles. Please try again."
+    },
+    "lockTitle": "Switch to your contractor workspace to unlock the crew list",
+    "lockSubtitle": "This directory is part of the contractor toolkit. Sign in with a contractor account to browse ready-to-work specialists.",
+    "lockCta": "Sign in as contractor",
+    "card": {
+      "noName": "Unnamed specialist",
+      "areaUnknown": "Area unavailable",
+      "experienceLabel": "Experience",
+      "experienceValue_one": "{{count}} year",
+      "experienceValue_other": "{{count}} years",
+      "experienceUnknown": "Experience pending",
+      "servicesLabel": "Services",
+      "skillsLabel": "Skills",
+      "none": "Not specified",
+      "bioPlaceholder": "This subcontractor is still crafting their introduction.",
+      "visit": "Visit profile"
+    }
   },
   "form": {
     "name": "Name",
@@ -112,7 +192,25 @@
     "title": "Login",
     "submit": "Sign In",
     "noAccount": "Don't have an account?",
-    "registerLink": "Register here"
+    "registerLink": "Register here",
+    "roleContext": "You're continuing as {{role}}. Sign in to access your workspace.",
+    "changeRole": "Choose another role",
+    "tagline": "Secure workspace access",
+    "subtitle": "Step back into your tailored command centre built for high-stakes collaboration.",
+    "highlights": {
+      "craft": {
+        "title": "Crafted UX",
+        "description": "Elastic surfaces flow with your workflow, keeping focus on decisions that matter."
+      },
+      "clarity": {
+        "title": "Living context",
+        "description": "Session-aware routing takes you exactly where work paused, no detours."
+      },
+      "momentum": {
+        "title": "Frictionless speed",
+        "description": "Adaptive forms react instantly, so sign-in is a one-breath interaction."
+      }
+    }
   },
   "register": {
     "title": "Register",
@@ -122,7 +220,34 @@
     "subcontractor": "Subcontractor",
     "submit": "Register",
     "haveAccount": "Already have an account?",
-    "loginLink": "Sign in here"
+    "loginLink": "Sign in here",
+    "tagline": "Choose your vantage point",
+    "subtitle": "Shape how you collaborate by selecting the workspace that mirrors your ambitions.",
+    "highlights": {
+      "trust": {
+        "title": "Shared trust",
+        "description": "Structured data capture aligns expectations from the first handshake."
+      },
+      "control": {
+        "title": "Operational control",
+        "description": "Role-based routing unlocks the right toolset the moment you arrive."
+      },
+      "velocity": {
+        "title": "Momentum",
+        "description": "Preloaded defaults minimise friction choose, confirm, and you're inside."
+      }
+    },
+    "roles": {
+      "homeowner": {
+        "caption": "Curate experience-rich project leads who respect your vision."
+      },
+      "contractor": {
+        "caption": "Command schedules, crews, and capital from a precision dashboard."
+      },
+      "subcontractor": {
+        "caption": "Broadcast your craft with availability telemetry in a single share."
+      }
+    }
   },
   "footer": {
     "disclaimer": "All information on this site is for general purposes only."

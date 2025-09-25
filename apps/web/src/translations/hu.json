@@ -1,20 +1,34 @@
 {
   "nav": {
     "home": "Kezdőlap",
-    "services": "Szolgáltatások",
-    "references": "Referenciák",
-    "request": "Ajánlatkérés",
     "login": "Bejelentkezés",
     "profile": "Profilom",
     "logout": "Kijelentkezés"
   },
+  "profileSidebar": {
+    "signedIn": "Bejelentkezve mint",
+    "collapsedLabel": "Fiók",
+    "expand": "Fiókpanel megnyitása",
+    "collapse": "Fiókpanel bezárása",
+    "loading": "Profil frissítése...",
+    "error": "Nem sikerült betölteni a profiladatokat.",
+    "viewProfile": "Profil megnyitása",
+    "emptyName": "Névtelen profil",
+    "roles": {
+      "homeowner": "Tulajdonosi munkaterület",
+      "contractor": "Fővállalkozói munkaterület",
+      "subcontractor": "Alvállalkozói munkaterület"
+    }
+  },
   "profile": {
+    "tagline": "Személyre szabott irányítópult",
     "title": "Saját profil",
     "roleLabel": "Aktív szerepkör: {{role}}",
     "loading": "Profil betöltése folyamatban...",
     "save": "Változtatások mentése",
     "saving": "Mentés...",
     "remove": "Eltávolítás",
+    "subtitle": "Finomhangold az adatokat, amelyek a láthatóságot, meghívásokat és csapatilleszkedést biztosítják.",
     "messages": {
       "saved": "A profil sikeresen frissült!"
     },
@@ -33,6 +47,8 @@
       "companyPlaceholder": "pl. Épít-És Kft."
     },
     "subcontractor": {
+      "name": "Megjelenített név",
+      "namePlaceholder": "pl. Skyline Renováció",
       "bio": "Magadról",
       "bioPlaceholder": "Rövid bemutatkozás, tapasztalatok, erősségek...",
       "services": "Szolgáltatások",
@@ -45,6 +61,8 @@
       "experiencePlaceholder": "pl. 5",
       "rates": "Óradíj (HUF)",
       "ratesPlaceholder": "pl. 8500",
+      "image": "Portfólió kép URL",
+      "imagePlaceholder": "https://...",
       "availability": {
         "title": "Elérhetőség",
         "hint": "Add meg, mely napokon és időpontokban tudsz dolgozni.",
@@ -69,30 +87,92 @@
     }
   },
   "home": {
-    "heroTitle": "Modern ipari megoldások",
-    "heroSubtitle": "Építkezzünk együtt – minőség és precizitás",
-    "cta": "Kérj ajánlatot",
-    "featuresTitle": "Miért válassz minket?",
-    "feature1Title": "Szakértelem",
-    "feature1Desc": "Tapasztalt csapatunk minden projektet precízen valósít meg.",
-    "feature2Title": "Megbízhatóság",
-    "feature2Desc": "Tartjuk a határidőket, és a minőségből sem engedünk.",
-    "feature3Title": "Rugalmasság",
-    "feature3Desc": "Igényeidhez igazodva alakítjuk szolgáltatásainkat."
+    "tagline": "Prémium együttműködési központ",
+    "hero": {
+      "title": "Átlátható együttműködés az építőiparban",
+      "subtitle": "Válaszd ki a hozzád illő szerepkört, és használd azokat az eszközöket, amelyek modern és tiszta folyamatokat biztosítanak."
+    },
+    "personas": {
+      "homeowner": {
+        "title": "Tulajdonos",
+        "description": "Biztonsággal tervezhetsz, ellenőrzött csapatokat találsz, és minden mérföldkövet a saját víziódhoz igazíthatsz.",
+        "cta": "Belépés tulajdonosként"
+      },
+      "contractor": {
+        "title": "Fővállalkozó",
+        "description": "Egyetlen felületen irányíthatod az alvállalkozókat, a költségkeretet és az előrehaladást.",
+        "cta": "Belépés fővállalkozóként"
+      },
+      "subcontractor": {
+        "title": "Alvállalkozó",
+        "description": "Megmutathatod a szakértelmed, pontos briefeket kapsz, és valós időben kapcsolódsz az építkezéshez.",
+        "cta": "Belépés alvállalkozóként"
+      }
+    },
+    "benefits": {
+      "trust": {
+        "title": "Valós idejű átláthatóság",
+        "description": "A költségkeretek, jóváhagyások és státuszok egy közös idővonalon futnak, minden érintett számára láthatóan."
+      },
+      "tools": {
+        "title": "Szerepkörökre hangolt eszközök",
+        "description": "A vezérlőpultok a feladataidhoz igazodnak, hogy mindig a legfontosabb döntésekre fókuszálhass."
+      },
+      "network": {
+        "title": "Összekapcsolt hálózat",
+        "description": "Tulajdonosok, kivitelezők és csapatok egy gondosan válogatott szakmai közösségben találkoznak."
+      },
+      "footer": "A Osus az első vázlattól az átadásig összehangolja az elvárásokat, így minden szereplő egy irányba húz."
+    }
   },
-  "services": {
-    "title": "Szolgáltatásaink",
-    "description": "Ipari projektmenedzsmenttől a műszaki kivitelezésig."
+  "contractorHub": {
+    "tagline": "Fővállalkozói irányítópult",
+    "title": "Válaszd ki, mivel viszed előre a projektjeidet",
+    "subtitle": "Kövesd a tulajdonosok nyitott igényeit vagy állítsd össze a következő kivitelezői csapatodat. Minden munkafelület átlátható kommunikációt és számon kérhető határidőket biztosít.",
+    "cards": {
+      "jobs": {
+        "title": "Nézd meg a szabad tulajdonosi projekteket",
+        "description": "Válogatott lehetőségek, ahol a tulajdonos még keresi a fővállalkozót. Ismerd meg egy pillantással a terjedelmet, ütemezést és keretet, mielőtt átveszed a vezetést.",
+        "cta": "Ajánlatok megnyitása"
+      },
+      "crew": {
+        "title": "Építsd fel a megbízható csapatodat",
+        "description": "Böngészd az alvállalkozói profiltárat tapasztalat jelvényekkel, elérhetőségi idősávokkal és hitelesített referenciákkal, hogy a menetrend a helyén maradjon.",
+        "cta": "Szakemberek felfedezése"
+      },
+      "post": {
+        "title": "Hirdess meg egy új projektet",
+        "description": "Indíts részletes kiírást mérföldkövekkel, költségkeret jelzésekkel és elvárt képesítésekkel. Az alvállalkozók azonnal jelentkezhetnek, így gyorsan összeáll a legjobb csapat.",
+        "cta": "Projekt közzététele"
+      }
+    }
   },
-  "references": {
-    "title": "Referenciák",
-    "description": "Tekintsd meg korábbi munkáinkat és partnereink véleményét."
-  },
-  "request": {
-    "title": "Ajánlatkérés",
-    "intro": "Töltsd ki az űrlapot, és hamarosan felvesszük veled a kapcsolatot.",
-    "success": "Köszönjük! Az ajánlatkérés elküldve.",
-    "error": "Hiba történt az elküldéskor."
+  "contractorCrew": {
+    "back": "Vissza",
+    "tagline": "Megbízható csapat adatbázis",
+    "title": "Böngéssz a következő projektre kész alvállalkozók között",
+    "subtitle": "Szűrj fókuszterület, tapasztalat és készségek alapján. A profilok egységes szerkezetben jelennek meg, hogy telefonálás nélkül is csapatot állíthass.",
+    "empty": "Még nincs elérhető alvállalkozói profil. Kérd meg a csapatodat, hogy töltse ki az adatait!",
+    "errors": {
+      "forbidden": "Csak fővállalkozói fiókkal érhető el a csapat adatbázis.",
+      "generic": "Nem tudtuk betölteni az alvállalkozói profilokat. Próbáld újra."
+    },
+    "lockTitle": "Válts fővállalkozói fiókra, hogy lásd a csapatlistát",
+    "lockSubtitle": "Ez az adatbázis a fővállalkozói eszköztár része. Jelentkezz be fővállalkozói fiókkal, és böngészd a munkára kész szakembereket.",
+    "lockCta": "Belépés fővállalkozóként",
+    "card": {
+      "noName": "Névtelen szakember",
+      "areaUnknown": "Terület nem ismert",
+      "experienceLabel": "Tapasztalat",
+      "experienceValue_one": "{{count}} év",
+      "experienceValue_other": "{{count}} év",
+      "experienceUnknown": "Tapasztalat feltöltés alatt",
+      "servicesLabel": "Szolgáltatások",
+      "skillsLabel": "Készségek",
+      "none": "Nincs megadva",
+      "bioPlaceholder": "Ez az alvállalkozó még dolgozik a bemutatkozásán.",
+      "visit": "Profil megnyitása"
+    }
   },
   "form": {
     "name": "Név",
@@ -112,7 +192,25 @@
     "title": "Bejelentkezés",
     "submit": "Belépés",
     "noAccount": "Nincs még fiókod?",
-    "registerLink": "Regisztrálj"
+    "registerLink": "Regisztrálj",
+    "roleContext": "{{role}} szerepben folytatod. Jelentkezz be a munkaterület eléréséhez.",
+    "changeRole": "Más szerepet választok",
+    "tagline": "Biztonságos belépés",
+    "subtitle": "Lépj vissza abba az irányítóközpontba, amelyet a nagy tétes együttműködéshez terveztünk.",
+    "highlights": {
+      "craft": {
+        "title": "Kidolgozott UX",
+        "description": "Rugalmas felületek követik a folyamatot, így csak a fontos döntésekre figyelsz."
+      },
+      "clarity": {
+        "title": "Élő kontextus",
+        "description": "A munkamenet-alapú irányítás oda visz vissza, ahol megálltál, kitérők nélkül."
+      },
+      "momentum": {
+        "title": "Akadásmentes ritmus",
+        "description": "Az alkalmazkodó űrlapok azonnal reagálnak, így a bejelentkezés egyetlen lélegzet."
+      }
+    }
   },
   "register": {
     "title": "Regisztráció",
@@ -122,7 +220,34 @@
     "subcontractor": "Alvállalkozó",
     "submit": "Regisztráció",
     "haveAccount": "Már van fiókod?",
-    "loginLink": "Jelentkezz be"
+    "loginLink": "Jelentkezz be",
+    "tagline": "Válaszd ki a nézőpontot",
+    "subtitle": "Formáld az együttműködést azzal, hogy a céljaidhoz illeszkedő munkaterületet választod.",
+    "highlights": {
+      "trust": {
+        "title": "Megosztott bizalom",
+        "description": "A strukturált adatfelvétel már az első kézfogástól egységes elvárásokat teremt."
+      },
+      "control": {
+        "title": "Operatív kontroll",
+        "description": "A szerepkör-alapú útvonal azonnal megnyitja a rád szabott eszköztárat."
+      },
+      "velocity": {
+        "title": "Lendület",
+        "description": "Az előre kitöltött alapok csökkentik a súrlódást, válassz, erősítsd meg, és már bent is vagy."
+      }
+    },
+    "roles": {
+      "homeowner": {
+        "caption": "Találj olyan projektvezetőket, akik tiszteletben tartják a víziód."
+      },
+      "contractor": {
+        "caption": "Irányítsd az ütemtervet, a csapatot és a keretet egy precíziós dashboardról."
+      },
+      "subcontractor": {
+        "caption": "Mutasd meg a szakmai energiád, elérhetőségedet és referenciáidat egyetlen megosztással."
+      }
+    }
   },
   "footer": {
     "disclaimer": "A weboldalon található adatok tájékoztató jellegűek."
