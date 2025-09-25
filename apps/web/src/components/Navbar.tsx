@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const Navbar: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const changeLang = () => {
-    const next = i18n.language === 'hu' ? 'en' : 'hu';
-    i18n.changeLanguage(next);
-  };
 
   useEffect(() => {
     const updateAuthState = () => {
@@ -30,14 +24,13 @@ const Navbar: React.FC = () => {
     localStorage.removeItem('token');
     window.dispatchEvent(new Event('auth-changed'));
     setOpen(false);
-    navigate('/login');
   };
 
   return (
     <header className="bg-dark-800 text-white">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="text-xl font-bold">
-          Site4Fun
+          Osus
         </Link>
         <div className="md:hidden">
           <button
@@ -57,46 +50,13 @@ const Navbar: React.FC = () => {
             to="/"
             end
             className={({ isActive }) =>
-              `block md:inline-block px-3 py-2 ${
+              `block md:inline-block px-3 py-2 font-medium transition-colors ${
                 isActive ? 'text-primary' : 'hover:text-primary'
               }`
             }
             onClick={() => setOpen(false)}
           >
             {t('nav.home')}
-          </NavLink>
-          <NavLink
-            to="/services"
-            className={({ isActive }) =>
-              `block md:inline-block px-3 py-2 ${
-                isActive ? 'text-primary' : 'hover:text-primary'
-              }`
-            }
-            onClick={() => setOpen(false)}
-          >
-            {t('nav.services')}
-          </NavLink>
-          <NavLink
-            to="/references"
-            className={({ isActive }) =>
-              `block md:inline-block px-3 py-2 ${
-                isActive ? 'text-primary' : 'hover:text-primary'
-              }`
-            }
-            onClick={() => setOpen(false)}
-          >
-            {t('nav.references')}
-          </NavLink>
-          <NavLink
-            to="/request-quote"
-            className={({ isActive }) =>
-              `block md:inline-block px-3 py-2 ${
-                isActive ? 'text-primary' : 'hover:text-primary'
-              }`
-            }
-            onClick={() => setOpen(false)}
-          >
-            {t('nav.request')}
           </NavLink>
           {isAuthenticated ? (
             <Link
@@ -143,15 +103,6 @@ const Navbar: React.FC = () => {
               {t('nav.logout')}
             </button>
           )}
-          <button
-            className="block w-full rounded-md border border-dark-700 px-3 py-2 text-left hover:border-primary md:hidden"
-            onClick={() => {
-              changeLang();
-              setOpen(false);
-            }}
-          >
-            {i18n.language.toUpperCase()}
-          </button>
         </nav>
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
@@ -194,15 +145,9 @@ const Navbar: React.FC = () => {
                   <path d="M21 12a.75.75 0 0 0-1.28-.53l-1.72 1.72V8a.75.75 0 0 0-1.5 0v5.19l-1.72-1.72a.75.75 0 1 0-1.06 1.06l3.25 3.25a.75.75 0 0 0 1.06 0l3.25-3.25c.146-.147.22-.339.22-.53Z" />
                 </svg>
               </span>
-              {t('nav.login')}
-            </Link>
+                {t('nav.login')}
+              </Link>
           )}
-          <button
-            className="px-3 py-2 hover:text-primary"
-            onClick={changeLang}
-          >
-            {i18n.language.toUpperCase()}
-          </button>
         </div>
       </div>
     </header>
