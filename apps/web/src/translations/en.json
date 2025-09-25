@@ -13,6 +13,7 @@
     "loading": "Refreshing profile...",
     "error": "We couldn't load your profile details.",
     "viewProfile": "Open profile",
+    "viewMessages": "Messages",
     "emptyName": "Unnamed profile",
     "roles": {
       "homeowner": "Homeowner workspace",
@@ -35,6 +36,13 @@
     "errors": {
       "loadFailed": "We couldn't load your profile. Please try again.",
       "saveFailed": "Couldn't save your changes."
+    },
+    "avatar": {
+      "label": "Profile photo",
+      "button": "Upload image",
+      "helper": "Supported formats: JPG, PNG, WEBP, or GIF.",
+      "empty": "No photo yet",
+      "pending": "Awaiting save"
     },
     "contractor": {
       "name": "Full name",
@@ -85,6 +93,18 @@
       "investmentMax": "Investment maximum (HUF)",
       "investmentMaxPlaceholder": "e.g. 15000000"
     }
+  },
+  "messages": {
+    "tagline": "Live collaboration hub",
+    "title": "Messages",
+    "subtitle": "Coordinate in real time with specialists you trust. Conversations stay in sync across every device.",
+    "emptyListHeading": "No conversations yet",
+    "emptyListBody": "Start a chat from the subcontractor directory to see it appear here.",
+    "emptyChatHeading": "Say hello",
+    "emptyChatBody": "Your thread history will appear once you send the first message.",
+    "loadOlder": "Load older",
+    "composerPlaceholder": "Type your message...",
+    "noMessagesSnippet": "No messages yet"
   },
   "home": {
     "tagline": "Premium collaboration hub",
@@ -171,7 +191,8 @@
       "skillsLabel": "Skills",
       "none": "Not specified",
       "bioPlaceholder": "This subcontractor is still crafting their introduction.",
-      "visit": "Visit profile"
+      "visit": "Visit profile",
+      "message": "Message"
     }
   },
   "form": {

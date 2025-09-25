@@ -13,6 +13,7 @@
     "loading": "Profil frissítése...",
     "error": "Nem sikerült betölteni a profiladatokat.",
     "viewProfile": "Profil megnyitása",
+    "viewMessages": "Üzenetek",
     "emptyName": "Névtelen profil",
     "roles": {
       "homeowner": "Tulajdonosi munkaterület",
@@ -35,6 +36,13 @@
     "errors": {
       "loadFailed": "Nem sikerült betölteni a profilodat. Próbáld újra!",
       "saveFailed": "Nem tudtuk menteni a módosításokat."
+    },
+    "avatar": {
+      "label": "Profilkép",
+      "button": "Kép feltöltése",
+      "helper": "Támogatott formátumok: JPG, PNG, WEBP vagy GIF.",
+      "empty": "Még nincs kép",
+      "pending": "Mentésre vár"
     },
     "contractor": {
       "name": "Teljes név",
@@ -85,6 +93,18 @@
       "investmentMax": "Beruházási maximum (HUF)",
       "investmentMaxPlaceholder": "pl. 15000000"
     }
+  },
+  "messages": {
+    "tagline": "Azonnali együttműködés",
+    "title": "Üzenetek",
+    "subtitle": "Maradj kapcsolatban a bevált szakemberekkel, és folytasd a beszélgetéseket valós időben, bármely eszközön.",
+    "emptyListHeading": "Még nincs beszélgetés",
+    "emptyListBody": "Indíts chatet az alvállalkozói adatbázisból, hogy itt megjelenjen.",
+    "emptyChatHeading": "Köszönj be",
+    "emptyChatBody": "Az üzenet előzményei az első üzenet elküldése után jelennek meg.",
+    "loadOlder": "Korábbiak betöltése",
+    "composerPlaceholder": "Írd be az üzeneted...",
+    "noMessagesSnippet": "Még nincs üzenet"
   },
   "home": {
     "tagline": "Prémium együttműködési központ",
@@ -171,7 +191,8 @@
       "skillsLabel": "Készségek",
       "none": "Nincs megadva",
       "bioPlaceholder": "Ez az alvállalkozó még dolgozik a bemutatkozásán.",
-      "visit": "Profil megnyitása"
+      "visit": "Profil megnyitása",
+      "message": "Üzenet"
     }
   },
   "form": {
