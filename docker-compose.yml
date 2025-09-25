@@ -21,10 +21,16 @@ services:
       - db
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      IMAGEKIT_PUBLIC_KEY: ${IMAGEKIT_PUBLIC_KEY}
+      IMAGEKIT_PRIVATE_KEY: ${IMAGEKIT_PRIVATE_KEY}
+      IMAGEKIT_UPLOAD_URL: ${IMAGEKIT_UPLOAD_URL}
+      IMAGEKIT_FOLDER: ${IMAGEKIT_FOLDER}
     command: >-
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
+    volumes:
+      - ./apps/api/app/media:/app/app/media
 
   pgadmin:
     image: dpage/pgadmin4
