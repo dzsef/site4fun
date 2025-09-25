@@ -26,12 +26,14 @@ class ContractorProfileData(BaseModel):
 
 
 class SubcontractorProfileData(BaseModel):
+    name: Optional[str] = None
     bio: Optional[str] = None
     skills: List[str] = Field(default_factory=list)
     services: List[str] = Field(default_factory=list)
     years_of_experience: Optional[int] = None
     rates: Optional[float] = None
     area: Optional[str] = None
+    image_url: Optional[str] = None
     availability: List[AvailabilitySlot] = Field(default_factory=list)
 
     class Config:
@@ -61,6 +63,20 @@ class SubcontractorProfileEnvelope(BaseModel):
 class HomeownerProfileEnvelope(BaseModel):
     role: Literal["homeowner"]
     profile: HomeownerProfileData
+
+
+class SubcontractorDirectoryCard(BaseModel):
+    user_id: int
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    area: Optional[str] = None
+    years_of_experience: Optional[int] = None
+    skills: List[str] = Field(default_factory=list)
+    services: List[str] = Field(default_factory=list)
+    image_url: Optional[str] = None
+
+    class Config:
+        orm_mode = True
 
 
 ProfileResponse = Union[

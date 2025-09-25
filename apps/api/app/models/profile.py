@@ -32,12 +32,14 @@ class SubcontractorProfile(Base):
     __tablename__ = "subcontractor_profiles"
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    name = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
     skills = Column(JSONB, nullable=False, server_default="[]", default=list)
     services = Column(JSONB, nullable=False, server_default="[]", default=list)
     years_of_experience = Column(Integer, nullable=True)
     rates = Column(Numeric(10, 2), nullable=True)
     area = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
 
     user = relationship("User", back_populates="subcontractor_profile")
     availability = relationship(

@@ -1,7 +1,7 @@
 """Profile management routes for authenticated users."""
 
 from decimal import Decimal
-from typing import Sequence
+from typing import List, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +26,7 @@ from ..schemas.profile import (
     ProfileUpdateRequest,
     SubcontractorProfileData,
     SubcontractorProfileEnvelope,
+    SubcontractorDirectoryCard,
 )
 
 router = APIRouter()
@@ -52,12 +53,14 @@ async def _subcontractor_response(user: User, db: AsyncSession) -> Subcontractor
         )
         slots = result.scalars().all()
         data = SubcontractorProfileData(
+            name=profile.name,
             bio=profile.bio,
             skills=list(profile.skills or []),
             services=list(profile.services or []),
             years_of_experience=profile.years_of_experience,
             rates=float(profile.rates) if profile.rates is not None else None,
             area=profile.area,
+            image_url=profile.image_url,
             availability=[AvailabilitySlot.from_orm(slot) for slot in slots] if slots else [],
         )
     return SubcontractorProfileEnvelope(role="subcontractor", profile=data)
@@ -144,12 +147,14 @@ async def update_profile(
             )
         _validate_subcontractor_availability(data.availability)
 
-        profile.bio = data.bio
+        profile.bio = data.bio.strip() if data.bio else None
+        profile.name = data.name.strip() if data.name else None
         profile.skills = [skill.strip() for skill in data.skills if skill.strip()]
         profile.services = [service.strip() for service in data.services if service.strip()]
         profile.years_of_experience = data.years_of_experience
         profile.rates = Decimal(str(data.rates)) if data.rates is not None else None
-        profile.area = data.area
+        profile.area = data.area.strip() if data.area else None
+        profile.image_url = data.image_url.strip() if data.image_url else None
 
         result = await db.execute(
             select(SubcontractorAvailability).where(SubcontractorAvailability.profile_id == current_user.id)
@@ -194,3 +199,31 @@ async def update_profile(
         return await _homeowner_response(current_user, db)
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported role")
+
+
+@router.get("/subcontractors", response_model=List[SubcontractorDirectoryCard])
+async def list_subcontractors(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[SubcontractorDirectoryCard]:
+    if current_user.role != "contractor":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Contractor role required")
+
+    result = await db.execute(select(SubcontractorProfile))
+    profiles = sorted(result.scalars().all(), key=lambda profile: (profile.name or "").lower())
+
+    cards = [
+        SubcontractorDirectoryCard(
+            user_id=profile.user_id,
+            name=profile.name,
+            bio=profile.bio,
+            area=profile.area,
+            years_of_experience=profile.years_of_experience,
+            skills=list(profile.skills or []),
+            services=list(profile.services or []),
+            image_url=profile.image_url,
+        )
+        for profile in profiles
+    ]
+
+    return cards
