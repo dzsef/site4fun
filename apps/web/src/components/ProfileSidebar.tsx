@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+
+import type { ProfileResponse } from '../types/profile';
+import {
+  PROFILE_CACHE_EVENT,
+  clearProfileCache,
+  readProfileCache,
+} from '../utils/profileCache';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
-type ProfileRole = 'homeowner' | 'contractor' | 'subcontractor';
-
-type RawProfile = Record<string, unknown> | null | undefined;
-
-type ProfileResponse = {
-  role: ProfileRole;
-  profile: RawProfile;
-};
+type ProfileRole = ProfileResponse['role'];
 
 type ProfileSummary = {
   name: string;
@@ -63,6 +63,7 @@ const buildInitials = (name: string): string => {
 
 const ProfileSidebar: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [summary, setSummary] = useState<ProfileSummary | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -75,9 +76,25 @@ const ProfileSidebar: React.FC = () => {
     setToken(localStorage.getItem('token'));
   }, []);
 
+  const loadFromCache = useCallback(() => {
+    const cached = readProfileCache();
+    if (!cached) {
+      setSummary(null);
+      return false;
+    }
+    setSummary(deriveSummary(cached, t('profileSidebar.emptyName')));
+    setStatus('idle');
+    return true;
+  }, [t]);
+
+  useEffect(() => {
+    loadFromCache();
+  }, [loadFromCache]);
+
   useEffect(() => {
     const handleAuthChanged = () => {
       syncToken();
+      loadFromCache();
     };
     window.addEventListener('auth-changed', handleAuthChanged);
     window.addEventListener('storage', handleAuthChanged);
@@ -85,14 +102,36 @@ const ProfileSidebar: React.FC = () => {
       window.removeEventListener('auth-changed', handleAuthChanged);
       window.removeEventListener('storage', handleAuthChanged);
     };
-  }, [syncToken]);
+  }, [loadFromCache, syncToken]);
+
+  useEffect(() => {
+    const handleCacheUpdated = (event: Event) => {
+      const custom = event as CustomEvent<ProfileResponse | null>;
+      const payload = custom.detail;
+      if (!payload) {
+        setSummary(null);
+        setStatus('idle');
+        return;
+      }
+      setSummary(deriveSummary(payload, t('profileSidebar.emptyName')));
+      setStatus('idle');
+    };
+
+    window.addEventListener(PROFILE_CACHE_EVENT, handleCacheUpdated);
+    return () => {
+      window.removeEventListener(PROFILE_CACHE_EVENT, handleCacheUpdated);
+    };
+  }, [t]);
 
   useEffect(() => {
     if (!token) {
       setSummary(null);
       setStatus('idle');
+      clearProfileCache();
       return;
     }
+
+    loadFromCache();
 
     let cancelled = false;
     const fetchProfile = async () => {
@@ -111,6 +150,7 @@ const ProfileSidebar: React.FC = () => {
             setSummary(null);
             setStatus('idle');
           }
+          clearProfileCache();
           return;
         }
         if (!response.ok) {
@@ -134,7 +174,7 @@ const ProfileSidebar: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [t, token]);
+  }, [loadFromCache, t, token]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -142,6 +182,8 @@ const ProfileSidebar: React.FC = () => {
     setSummary(null);
     setStatus('idle');
     setPinnedOpen(false);
+    clearProfileCache();
+    navigate('/', { replace: true });
   };
 
   if (!token) {
@@ -269,6 +311,24 @@ const ProfileSidebar: React.FC = () => {
                 <path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6v1H4v-1Z" />
               </svg>
               {t('profileSidebar.viewProfile')}
+            </Link>
+            <Link
+              to="/messages"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold text-white/90 shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-transform duration-400 hover:scale-[1.02] hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            >
+              <svg
+                aria-hidden="true"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 1 1 17 0Z" />
+              </svg>
+              {t('profileSidebar.viewMessages')}
             </Link>
             <button
               type="button"

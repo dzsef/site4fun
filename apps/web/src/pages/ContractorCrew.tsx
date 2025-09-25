@@ -1,8 +1,31 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { createConversation } from '../utils/chatApi';
+
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+const apiOrigin = (() => {
+  const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (configured && /^https?:\/\//i.test(configured)) {
+    try {
+      return new URL(configured).origin;
+    } catch (error) {
+      console.warn('Invalid VITE_API_BASE_URL value:', error);
+    }
+  }
+  return null;
+})();
+
+const resolveImageUrl = (value: string | null): string | null => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith('/') && apiOrigin) {
+    return `${apiOrigin}${value}`;
+  }
+  return value;
+};
 
 type CrewCard = {
   user_id: number;
@@ -57,9 +80,11 @@ const CrewAvatar: React.FC<{ imageUrl: string | null; name: string | null; palet
 type DetailPanelProps = {
   card: CrewCard;
   onClose: () => void;
+  onMessage: (card: CrewCard) => void;
+  messageBusy: boolean;
 };
 
-const DetailPanel: React.FC<DetailPanelProps> = ({ card, onClose }) => {
+const DetailPanel: React.FC<DetailPanelProps> = ({ card, onClose, onMessage, messageBusy }) => {
   const { t } = useTranslation();
 
   return (
@@ -125,6 +150,28 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ card, onClose }) => {
                 </dd>
               </div>
             </dl>
+            <div className="pt-4">
+              <button
+                type="button"
+                onClick={() => onMessage(card)}
+                disabled={messageBusy}
+                className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-dark-900 shadow-[0_18px_60px_rgba(245,184,0,0.35)] transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {messageBusy ? t('profile.saving') : t('contractorCrew.card.message')}
+                <svg
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 1 1 17 0Z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -143,8 +190,39 @@ const ContractorCrew: React.FC = () => {
   const [restricted, setRestricted] = useState(false);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [unauthenticated, setUnauthenticated] = useState(() => !localStorage.getItem('token'));
+  const [messageBusyId, setMessageBusyId] = useState<number | null>(null);
 
   const isLocked = restricted || unauthenticated;
+
+  const handleStartConversation = useCallback(
+    async (card: CrewCard) => {
+      if (!token) {
+        const next = encodeURIComponent('/messages');
+        navigate(`/login?role=contractor&next=${next}`);
+        return;
+      }
+
+      setMessageBusyId(card.user_id);
+      try {
+        const response = await createConversation(token, card.user_id);
+        setSelected(null);
+        navigate(`/messages?conversation=${response.conversation.id}`);
+      } catch (error) {
+        console.error(error);
+        const message = (error as Error).message || t('contractorCrew.errors.generic');
+        setError(message);
+        if (message.toLowerCase().includes('unauth')) {
+          localStorage.removeItem('token');
+          window.dispatchEvent(new Event('auth-changed'));
+          setToken(null);
+          setUnauthenticated(true);
+        }
+      } finally {
+        setMessageBusyId(null);
+      }
+    },
+    [navigate, t, token],
+  );
 
   useEffect(() => {
     if (!selected) return;
@@ -221,8 +299,12 @@ const ContractorCrew: React.FC = () => {
           throw new Error(t('contractorCrew.errors.generic'));
         }
         const payload = (await res.json()) as CrewCard[];
+        const normalized = payload.map((card) => ({
+          ...card,
+          image_url: resolveImageUrl(card.image_url),
+        }));
         if (!cancelled) {
-          setCrew(payload);
+          setCrew(normalized);
           setError(null);
           setRestricted(false);
           setUnauthenticated(false);
@@ -396,26 +478,48 @@ const ContractorCrew: React.FC = () => {
                       {card.bio || t('contractorCrew.card.bioPlaceholder')}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(card)}
-                    className="mt-auto inline-flex items-center justify-center gap-3 rounded-full border border-primary/50 bg-primary/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-primary transition-transform duration-500 ease-[cubic-bezier(.22,1.61,.36,1)] hover:-translate-y-0.5 hover:text-dark-900 hover:shadow-[0_18px_60px_rgba(245,184,0,0.35)]"
-                  >
-                    {t('contractorCrew.card.visit')}
-                    <svg
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                  <div className="mt-auto flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleStartConversation(card)}
+                      disabled={messageBusyId === card.user_id}
+                      className="inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-dark-900 shadow-[0_18px_60px_rgba(245,184,0,0.35)] transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <path d="M8 5h11v11" />
-                      <path d="M5 19 18.5 5.5" />
-                    </svg>
-                  </button>
+                      {messageBusyId === card.user_id ? t('profile.saving') : t('contractorCrew.card.message')}
+                      <svg
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 1 1 17 0Z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(card)}
+                      className="inline-flex items-center justify-center gap-3 rounded-full border border-primary/50 bg-primary/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-primary transition-transform duration-500 ease-[cubic-bezier(.22,1.61,.36,1)] hover:-translate-y-0.5 hover:text-dark-900 hover:shadow-[0_18px_60px_rgba(245,184,0,0.35)]"
+                    >
+                      {t('contractorCrew.card.visit')}
+                      <svg
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M8 5h11v11" />
+                        <path d="M5 19 18.5 5.5" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
@@ -423,7 +527,14 @@ const ContractorCrew: React.FC = () => {
         )}
       </section>
 
-      {selected && <DetailPanel card={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <DetailPanel
+          card={selected}
+          onClose={() => setSelected(null)}
+          onMessage={handleStartConversation}
+          messageBusy={messageBusyId === selected.user_id}
+        />
+      )}
     </div>
   );
 };

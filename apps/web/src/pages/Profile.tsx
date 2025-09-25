@@ -1,48 +1,46 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import type {
+  AvailabilitySlot,
+  ContractorProfile,
+  HomeownerProfile,
+  ProfileResponse,
+  SubcontractorProfile,
+} from '../types/profile';
+import { readProfileCache, writeProfileCache, clearProfileCache } from '../utils/profileCache';
+
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
-type AvailabilitySlot = {
-  date: string;
-  start_time: string;
-  end_time: string;
-};
+const apiOrigin = (() => {
+  const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (configured && /^https?:\/\//i.test(configured)) {
+    try {
+      return new URL(configured).origin;
+    } catch (error) {
+      console.warn('Invalid VITE_API_BASE_URL value:', error);
+    }
+  }
+  return null;
+})();
 
-type ContractorProfile = {
-  name: string | null;
-  country: string | null;
-  city: string | null;
-  company_name: string | null;
+const resolveImageUrl = (value: string | null): string | null => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith('/') && apiOrigin) {
+    return `${apiOrigin}${value}`;
+  }
+  return value;
 };
-
-type SubcontractorProfile = {
-  name: string | null;
-  bio: string | null;
-  skills: string[];
-  services: string[];
-  years_of_experience: number | null;
-  rates: number | null;
-  area: string | null;
-  image_url: string | null;
-  availability: AvailabilitySlot[];
-};
-
-type HomeownerProfile = {
-  name: string | null;
-  city: string | null;
-  investment_min: number | null;
-  investment_max: number | null;
-};
-
-type ProfileResponse =
-  | { role: 'contractor'; profile: ContractorProfile }
-  | { role: 'subcontractor'; profile: SubcontractorProfile }
-  | { role: 'homeowner'; profile: HomeownerProfile };
 
 type ApiError = string | null;
+
+type ProfileSavePayload<TProfile> = {
+  profile?: TProfile;
+  avatarFile?: File | null;
+};
 
 const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
   if (data.role === 'contractor') {
@@ -54,6 +52,7 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
         country: profile.country ?? null,
         city: profile.city ?? null,
         company_name: profile.company_name ?? null,
+        image_url: resolveImageUrl(profile.image_url ?? null),
       },
     };
   }
@@ -79,7 +78,7 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
             ? Number(profile.rates)
             : null,
         area: profile.area ?? null,
-        image_url: profile.image_url ?? null,
+        image_url: resolveImageUrl(profile.image_url ?? null),
         availability: Array.isArray(profile.availability)
           ? profile.availability.map((slot) => ({
               date: slot.date,
@@ -108,6 +107,7 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
           : profile.investment_max != null
           ? Number(profile.investment_max)
           : null,
+      image_url: resolveImageUrl(profile.image_url ?? null),
     },
   };
 };
@@ -115,13 +115,22 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
 const Profile: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
+  const [profileData, setProfileData] = useState<ProfileResponse | null>(() => {
+    const cached = readProfileCache();
+    return cached ? sanitizeProfile(cached) : null;
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<ApiError>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const token = useMemo(() => localStorage.getItem('token'), []);
+
+  const applyProfile = useCallback((payload: ProfileResponse) => {
+    const sanitized = sanitizeProfile(payload);
+    setProfileData(sanitized);
+    writeProfileCache(sanitized);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -141,6 +150,7 @@ const Profile: React.FC = () => {
         if (res.status === 401) {
           localStorage.removeItem('token');
           window.dispatchEvent(new Event('auth-changed'));
+          clearProfileCache();
           navigate('/login', { replace: true });
           return;
         }
@@ -148,7 +158,7 @@ const Profile: React.FC = () => {
           throw new Error(t('profile.errors.loadFailed'));
         }
         const data = (await res.json()) as ProfileResponse;
-        setProfileData(sanitizeProfile(data));
+        applyProfile(data);
         setError(null);
       } catch (err) {
         console.error(err);
@@ -159,36 +169,86 @@ const Profile: React.FC = () => {
     };
 
     fetchProfile();
-  }, [navigate, t, token]);
+  }, [applyProfile, navigate, t, token]);
 
-  const handleUpdate = async (profile: Record<string, unknown>) => {
+  const handleUpdate = async ({
+    profile,
+    avatarFile,
+  }: {
+    profile?: Record<string, unknown>;
+    avatarFile?: File | null;
+  }) => {
     if (!profileData || !token) return;
+
+    const shouldUpdateProfile = Boolean(profile);
+    const shouldUploadAvatar = Boolean(avatarFile);
+
+    if (!shouldUpdateProfile && !shouldUploadAvatar) {
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
-      const res = await fetch(`${baseUrl}/profile/me`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ role: profileData.role, profile }),
-      });
-      if (res.status === 401) {
-        localStorage.removeItem('token');
-        window.dispatchEvent(new Event('auth-changed'));
-        navigate('/login', { replace: true });
-        return;
+      let hasChange = false;
+
+      if (shouldUpdateProfile && profile) {
+        const res = await fetch(`${baseUrl}/profile/me`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ role: profileData.role, profile }),
+        });
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          window.dispatchEvent(new Event('auth-changed'));
+          clearProfileCache();
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (!res.ok) {
+          const errPayload = await res.json().catch(() => null);
+          throw new Error(errPayload?.detail || t('profile.errors.saveFailed'));
+        }
+        const updated = (await res.json()) as ProfileResponse;
+        applyProfile(updated);
+        hasChange = true;
       }
-      if (!res.ok) {
-        const errPayload = await res.json().catch(() => null);
-        throw new Error(errPayload?.detail || t('profile.errors.saveFailed'));
+
+      if (shouldUploadAvatar && avatarFile) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        const avatarRes = await fetch(`${baseUrl}/profile/me/avatar`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: formData,
+        });
+        if (avatarRes.status === 401) {
+          localStorage.removeItem('token');
+          window.dispatchEvent(new Event('auth-changed'));
+          clearProfileCache();
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (!avatarRes.ok) {
+          const errPayload = await avatarRes.json().catch(() => null);
+          throw new Error(errPayload?.detail || t('profile.errors.saveFailed'));
+        }
+        const avatarPayload = (await avatarRes.json()) as ProfileResponse;
+        applyProfile(avatarPayload);
+        hasChange = true;
       }
-      const updated = (await res.json()) as ProfileResponse;
-      setProfileData(sanitizeProfile(updated));
-      setSuccessMessage(t('profile.messages.saved'));
-      setTimeout(() => setSuccessMessage(null), 3000);
+
+      if (hasChange) {
+        setSuccessMessage(t('profile.messages.saved'));
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
     } catch (err) {
       console.error(err);
       setError((err as Error).message);
@@ -330,12 +390,16 @@ type ContractorFormValues = {
 
 type ContractorProfileFormProps = {
   data: ContractorProfile;
-  onSave: (update: ContractorProfile) => void | Promise<void>;
+  onSave: (payload: ProfileSavePayload<ContractorProfile>) => void | Promise<void>;
   saving: boolean;
 };
 
 const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onSave, saving }) => {
   const { t } = useTranslation();
+  const avatarObjectUrlRef = useRef<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(data.image_url);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUpdated, setAvatarUpdated] = useState(false);
   const {
     register,
     handleSubmit,
@@ -359,17 +423,104 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
     });
   }, [data, reset]);
 
-  const submit = (values: ContractorFormValues) => {
-    onSave({
-      name: values.name || null,
-      country: values.country || null,
-      city: values.city || null,
-      company_name: values.company_name || null,
-    });
+  useEffect(() => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+    setAvatarPreview(data.image_url ?? null);
+    setAvatarFile(null);
+    setAvatarUpdated(false);
+  }, [data]);
+
+  useEffect(() => () => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+  }, []);
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      event.target.value = '';
+      return;
+    }
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = objectUrl;
+    setAvatarFile(file);
+    setAvatarPreview(objectUrl);
+    setAvatarUpdated(true);
+    event.target.value = '';
   };
+
+  const submit = (values: ContractorFormValues) => {
+    const payload: ProfileSavePayload<ContractorProfile> = {};
+
+    if (isDirty) {
+      payload.profile = {
+        name: values.name ? values.name : null,
+        country: values.country ? values.country : null,
+        city: values.city ? values.city : null,
+        company_name: values.company_name ? values.company_name : null,
+        image_url: data.image_url ?? null,
+      };
+    }
+
+    if (avatarUpdated && avatarFile) {
+      payload.avatarFile = avatarFile;
+    }
+
+    if (!payload.profile && !payload.avatarFile) {
+      return;
+    }
+
+    onSave(payload);
+  };
+
+  const canSubmit = isDirty || avatarUpdated;
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-10">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#101726] text-[0.55rem] font-semibold uppercase tracking-[0.4em] text-white/40">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={t('profile.avatar.label')}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>{t('profile.avatar.empty')}</span>
+              )}
+            </div>
+            {avatarUpdated && (
+              <span className="text-[0.55rem] font-semibold uppercase tracking-[0.35em] text-primary">
+                {t('profile.avatar.pending')}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+            <span>{t('profile.avatar.label')}</span>
+            <label className="inline-flex w-fit cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.55rem] tracking-[0.3em] text-white transition duration-200 hover:border-primary/60 hover:text-primary">
+              {t('profile.avatar.button')}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleAvatarChange}
+              />
+            </label>
+            <p className="text-[0.6rem] font-normal uppercase tracking-[0.25em] text-white/40">
+              {t('profile.avatar.helper')}
+            </p>
+          </div>
+        </div>
+      </div>
       <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
         <fieldset className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <InputField
@@ -397,7 +548,7 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={saving || !isDirty}
+          disabled={saving || !canSubmit}
           className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_25px_60px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
@@ -409,7 +560,7 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
 
 type SubcontractorProfileFormProps = {
   data: SubcontractorProfile;
-  onSave: (update: SubcontractorProfile) => void | Promise<void>;
+  onSave: (payload: ProfileSavePayload<SubcontractorProfile>) => void | Promise<void>;
   saving: boolean;
 };
 
@@ -419,7 +570,6 @@ type SubcontractorFormValues = {
   area: string;
   years_of_experience: string;
   rates: string;
-  image_url: string;
 };
 
 const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ data, onSave, saving }) => {
@@ -436,9 +586,12 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
       area: data.area ?? '',
       years_of_experience: data.years_of_experience?.toString() ?? '',
       rates: data.rates?.toString() ?? '',
-      image_url: data.image_url ?? '',
     },
   });
+  const avatarObjectUrlRef = useRef<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(data.image_url);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUpdated, setAvatarUpdated] = useState(false);
   const originalSkills = useMemo(() => data.skills.join(', '), [data.skills]);
   const originalServices = useMemo(() => data.services.join(', '), [data.services]);
   const originalAvailabilitySignature = useMemo(
@@ -464,18 +617,47 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
       area: data.area ?? '',
       years_of_experience: data.years_of_experience?.toString() ?? '',
       rates: data.rates?.toString() ?? '',
-      image_url: data.image_url ?? '',
     });
     setSkillsInput(data.skills.join(', '));
     setServicesInput(data.services.join(', '));
     setAvailability(data.availability.map((slot) => ({ ...slot })));
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+    setAvatarPreview(data.image_url ?? null);
+    setAvatarFile(null);
+    setAvatarUpdated(false);
   }, [data, reset]);
+
+  useEffect(() => () => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+  }, []);
 
   const parseList = (value: string) =>
     value
       .split(',')
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      event.target.value = '';
+      return;
+    }
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = objectUrl;
+    setAvatarFile(file);
+    setAvatarPreview(objectUrl);
+    setAvatarUpdated(true);
+    event.target.value = '';
+  };
 
   const addSlot = () => {
     if (!newSlot.date || !newSlot.start_time || !newSlot.end_time) {
@@ -495,55 +677,104 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
     setAvailability((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const submit = (values: SubcontractorFormValues) => {
-    const yearsValue = values.years_of_experience ? Number(values.years_of_experience) : null;
-    const ratesValue = values.rates ? Number(values.rates) : null;
-    onSave({
-      name: values.name || null,
-      bio: values.bio || null,
-      skills: parseList(skillsInput),
-      services: parseList(servicesInput),
-      years_of_experience: Number.isNaN(yearsValue) ? null : yearsValue,
-      rates: Number.isNaN(ratesValue) ? null : ratesValue,
-      area: values.area || null,
-      image_url: values.image_url ? values.image_url.trim() : null,
-      availability,
-    });
-  };
-
   const currentAvailabilitySignature = useMemo(
     () => JSON.stringify(availability),
     [availability],
   );
 
-  const isFormDirty =
+  const profileDirty =
     isDirty ||
     skillsInput !== originalSkills ||
     servicesInput !== originalServices ||
     currentAvailabilitySignature !== originalAvailabilitySignature;
 
+  const submit = (values: SubcontractorFormValues) => {
+    const yearsValue = values.years_of_experience ? Number(values.years_of_experience) : null;
+    const ratesValue = values.rates ? Number(values.rates) : null;
+    const payload: ProfileSavePayload<SubcontractorProfile> = {};
+
+    if (profileDirty) {
+      payload.profile = {
+        name: values.name || null,
+        bio: values.bio || null,
+        skills: parseList(skillsInput),
+        services: parseList(servicesInput),
+        years_of_experience: Number.isNaN(yearsValue) ? null : yearsValue,
+        rates: Number.isNaN(ratesValue) ? null : ratesValue,
+        area: values.area || null,
+        image_url: data.image_url ?? null,
+        availability,
+      };
+    }
+
+    if (avatarUpdated && avatarFile) {
+      payload.avatarFile = avatarFile;
+    }
+
+    if (!payload.profile && !payload.avatarFile) {
+      return;
+    }
+
+    onSave(payload);
+  };
+
+  const canSubmit = profileDirty || avatarUpdated;
+
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-10">
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
-          <div className="grid grid-cols-1 gap-6">
-            <InputField
-              label={t('profile.subcontractor.name')}
-              placeholder={t('profile.subcontractor.namePlaceholder')}
-              {...register('name')}
-            />
-            <InputField
-              label={t('profile.subcontractor.image')}
-              placeholder={t('profile.subcontractor.imagePlaceholder')}
-              type="url"
-              {...register('image_url')}
-            />
-            <TextAreaField
-              label={t('profile.subcontractor.bio')}
-              placeholder={t('profile.subcontractor.bioPlaceholder')}
-              rows={5}
-              {...register('bio')}
-            />
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#101726] text-[0.55rem] font-semibold uppercase tracking-[0.4em] text-white/40">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt={t('profile.avatar.label')}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span>{t('profile.avatar.empty')}</span>
+                  )}
+                </div>
+                {avatarUpdated && (
+                  <span className="text-[0.55rem] font-semibold uppercase tracking-[0.35em] text-primary">
+                    {t('profile.avatar.pending')}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                <span>{t('profile.avatar.label')}</span>
+                <label className="inline-flex w-fit cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.55rem] tracking-[0.3em] text-white transition duration-200 hover:border-primary/60 hover:text-primary">
+                  {t('profile.avatar.button')}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={handleAvatarChange}
+                  />
+                </label>
+                <p className="text-[0.6rem] font-normal uppercase tracking-[0.25em] text-white/40">
+                  {t('profile.avatar.helper')}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+            <div className="grid grid-cols-1 gap-6">
+              <InputField
+                label={t('profile.subcontractor.name')}
+                placeholder={t('profile.subcontractor.namePlaceholder')}
+                {...register('name')}
+              />
+              <TextAreaField
+                label={t('profile.subcontractor.bio')}
+                placeholder={t('profile.subcontractor.bioPlaceholder')}
+                rows={5}
+                {...register('bio')}
+              />
+            </div>
           </div>
         </div>
         <div className="grid gap-6">
@@ -680,7 +911,7 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={saving || !isFormDirty}
+          disabled={saving || !canSubmit}
           className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
@@ -688,6 +919,20 @@ const SubcontractorProfileForm: React.FC<SubcontractorProfileFormProps> = ({ dat
       </div>
     </form>
   );
+};
+
+
+type HomeownerFormValues = {
+  name: string;
+  city: string;
+  investment_min: string;
+  investment_max: string;
+};
+
+type HomeownerProfileFormProps = {
+  data: HomeownerProfile;
+  onSave: (payload: ProfileSavePayload<HomeownerProfile>) => void | Promise<void>;
+  saving: boolean;
 };
 
 
@@ -706,6 +951,10 @@ const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSav
       investment_max: data.investment_max?.toString() ?? '',
     },
   });
+  const avatarObjectUrlRef = useRef<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(data.image_url);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUpdated, setAvatarUpdated] = useState(false);
 
   useEffect(() => {
     reset({
@@ -714,21 +963,105 @@ const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSav
       investment_min: data.investment_min?.toString() ?? '',
       investment_max: data.investment_max?.toString() ?? '',
     });
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+    setAvatarPreview(data.image_url ?? null);
+    setAvatarFile(null);
+    setAvatarUpdated(false);
   }, [data, reset]);
+
+  useEffect(() => () => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+  }, []);
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      event.target.value = '';
+      return;
+    }
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = objectUrl;
+    setAvatarFile(file);
+    setAvatarPreview(objectUrl);
+    setAvatarUpdated(true);
+    event.target.value = '';
+  };
 
   const submit = (values: HomeownerFormValues) => {
     const minValue = values.investment_min ? Number(values.investment_min) : null;
     const maxValue = values.investment_max ? Number(values.investment_max) : null;
-    onSave({
-      name: values.name || null,
-      city: values.city || null,
-      investment_min: Number.isNaN(minValue) ? null : minValue,
-      investment_max: Number.isNaN(maxValue) ? null : maxValue,
-    });
+    const payload: ProfileSavePayload<HomeownerProfile> = {};
+
+    if (isDirty) {
+      payload.profile = {
+        name: values.name || null,
+        city: values.city || null,
+        investment_min: Number.isNaN(minValue) ? null : minValue,
+        investment_max: Number.isNaN(maxValue) ? null : maxValue,
+        image_url: data.image_url ?? null,
+      };
+    }
+
+    if (avatarUpdated && avatarFile) {
+      payload.avatarFile = avatarFile;
+    }
+
+    if (!payload.profile && !payload.avatarFile) {
+      return;
+    }
+
+    onSave(payload);
   };
+
+  const canSubmit = isDirty || avatarUpdated;
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-10">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#101726] text-[0.55rem] font-semibold uppercase tracking-[0.4em] text-white/40">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={t('profile.avatar.label')}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>{t('profile.avatar.empty')}</span>
+              )}
+            </div>
+            {avatarUpdated && (
+              <span className="text-[0.55rem] font-semibold uppercase tracking-[0.35em] text-primary">
+                {t('profile.avatar.pending')}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+            <span>{t('profile.avatar.label')}</span>
+            <label className="inline-flex w-fit cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.55rem] tracking-[0.3em] text-white transition duration-200 hover:border-primary/60 hover:text-primary">
+              {t('profile.avatar.button')}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleAvatarChange}
+              />
+            </label>
+            <p className="text-[0.6rem] font-normal uppercase tracking-[0.25em] text-white/40">
+              {t('profile.avatar.helper')}
+            </p>
+          </div>
+        </div>
+      </div>
       <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_24px_80px_rgba(3,7,18,0.6)] backdrop-blur-xl">
         <fieldset className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <InputField
@@ -762,7 +1095,7 @@ const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSav
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={saving || !isDirty}
+          disabled={saving || !canSubmit}
           className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
