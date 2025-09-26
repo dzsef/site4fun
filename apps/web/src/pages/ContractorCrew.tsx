@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { createConversation } from '../utils/chatApi';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -203,23 +202,8 @@ const ContractorCrew: React.FC = () => {
       }
 
       setMessageBusyId(card.user_id);
-      try {
-        const response = await createConversation(token, card.user_id);
-        setSelected(null);
-        navigate(`/messages?conversation=${response.conversation.id}`);
-      } catch (error) {
-        console.error(error);
-        const message = (error as Error).message || t('contractorCrew.errors.generic');
-        setError(message);
-        if (message.toLowerCase().includes('unauth')) {
-          localStorage.removeItem('token');
-          window.dispatchEvent(new Event('auth-changed'));
-          setToken(null);
-          setUnauthenticated(true);
-        }
-      } finally {
-        setMessageBusyId(null);
-      }
+      setSelected(null);
+      navigate(`/messages?start=${card.user_id}`);
     },
     [navigate, t, token],
   );

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import type { ProfileResponse } from '../types/profile';
@@ -64,13 +64,23 @@ const buildInitials = (name: string): string => {
 const ProfileSidebar: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [summary, setSummary] = useState<ProfileSummary | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [pinnedOpen, setPinnedOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    const isMessagesRoute = window.location.pathname.startsWith('/messages');
+    const prefersCompact = window.matchMedia('(max-width: 1023px)').matches;
+    return isMessagesRoute || prefersCompact;
+  });
 
-  const isOpen = pinnedOpen || hovering;
+  const isDrawerVisible = !isCollapsed;
+  const isOpen = isDrawerVisible && (pinnedOpen || hovering);
 
   const syncToken = useCallback(() => {
     setToken(localStorage.getItem('token'));
@@ -186,9 +196,56 @@ const ProfileSidebar: React.FC = () => {
     navigate('/', { replace: true });
   };
 
+  useEffect(() => {
+    if (location.pathname.startsWith('/messages')) {
+      setIsCollapsed(true);
+      setPinnedOpen(false);
+      setHovering(false);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const updateFromQuery = (matches: boolean) => {
+      if (matches) {
+        setIsCollapsed(true);
+        setPinnedOpen(false);
+        setHovering(false);
+      } else {
+        setIsCollapsed(false);
+      }
+    };
+    updateFromQuery(mediaQuery.matches);
+    const listener = (event: MediaQueryListEvent) => updateFromQuery(event.matches);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', listener);
+    } else {
+      mediaQuery.addListener(listener);
+    }
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', listener);
+      } else {
+        mediaQuery.removeListener(listener);
+      }
+    };
+  }, []);
+
   if (!token) {
     return null;
   }
+
+  const handleToggleCollapsed = () => {
+    setHovering(false);
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      setPinnedOpen(true);
+    } else {
+      setIsCollapsed(true);
+      setPinnedOpen(false);
+    }
+  };
 
   const roleLabel = summary
     ? t(`profileSidebar.roles.${summary.role}`)
@@ -198,11 +255,36 @@ const ProfileSidebar: React.FC = () => {
   const gradient = summary ? gradientByRole[summary.role] : gradientByRole.contractor;
 
   return (
-    <div
-      className="pointer-events-none fixed inset-y-6 right-6 z-40 flex"
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-    >
+    <>
+      <button
+        type="button"
+        onClick={handleToggleCollapsed}
+        aria-expanded={!isCollapsed}
+        className="fixed right-4 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white shadow-[0_18px_40px_rgba(5,9,18,0.5)] transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-dark-900"
+      >
+        <svg
+          aria-hidden="true"
+          className={`h-5 w-5 transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] ${
+            isCollapsed ? '' : 'rotate-180'
+          }`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M9 5 16 12 9 19" />
+        </svg>
+      </button>
+
+      <div
+        className={`fixed inset-y-6 right-6 z-40 flex transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] ${
+          isCollapsed ? 'translate-x-[calc(100%+2rem)] pointer-events-none' : 'translate-x-0 pointer-events-auto'
+        }`}
+        onMouseEnter={() => !isCollapsed && setHovering(true)}
+        onMouseLeave={() => !isCollapsed && setHovering(false)}
+      >
       <div
         className={`pointer-events-auto relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_26px_70px_rgba(0,0,0,0.35)] transition-[width] duration-500 ease-[cubic-bezier(.22,1.61,.36,1)] ${
           isOpen ? 'w-[20rem]' : 'w-[4.75rem]'
@@ -362,7 +444,8 @@ const ProfileSidebar: React.FC = () => {
           {t('profileSidebar.collapsedLabel')}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

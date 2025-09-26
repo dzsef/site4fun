@@ -6,6 +6,7 @@ import ConversationList from '../components/chat/ConversationList';
 import ChatWindow from '../components/chat/ChatWindow';
 import type { ChatEvent, ConversationSummary, Message } from '../types/chat';
 import {
+  createConversation,
   fetchConversations,
   fetchMessages,
   markConversationRead,
@@ -39,12 +40,9 @@ const Messages: React.FC = () => {
   const [messagesError, setMessagesError] = useState<string | null>(null);
 
   const [socketStatus, setSocketStatus] = useState<'idle' | 'connected' | 'error'>('idle');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    return window.matchMedia('(min-width: 1024px)').matches;
-  });
+  const startCounterpartyId = searchParams.get('start');
+  const searchParamsKey = searchParams.toString();
+  const processedStartRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -64,7 +62,7 @@ const Messages: React.FC = () => {
   const selectConversation = useCallback(
     (conversationId: string | null) => {
       if (conversationId === activeConversationIdRef.current) {
-        const params = new URLSearchParams(searchParams);
+        const params = new URLSearchParams(searchParamsKey);
         if (conversationId) {
           if (params.get('conversation') !== conversationId) {
             params.set('conversation', conversationId);
@@ -81,18 +79,15 @@ const Messages: React.FC = () => {
       setMessages([]);
       setMessagesHasMore(false);
       setMessagesError(null);
-      const params = new URLSearchParams(searchParams);
+      const params = new URLSearchParams(searchParamsKey);
       if (conversationId) {
         params.set('conversation', conversationId);
       } else {
         params.delete('conversation');
       }
       setSearchParams(params, { replace: true });
-      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-      }
     },
-    [searchParams, setIsSidebarOpen, setSearchParams],
+    [searchParamsKey, setSearchParams],
   );
 
   const refreshConversations = useCallback(async () => {
@@ -102,21 +97,13 @@ const Messages: React.FC = () => {
     try {
       const response = await fetchConversations(token);
       updateConversations(() => response.conversations);
-      if (!activeConversationIdRef.current) {
-        const preferred = searchParams.get('conversation');
-        if (preferred && response.conversations.some((c) => c.id === preferred)) {
-          selectConversation(preferred);
-        } else if (response.conversations.length) {
-          selectConversation(response.conversations[0].id);
-        }
-      }
     } catch (error) {
       console.error(error);
       setConversationsError((error as Error).message);
     } finally {
       setConversationsLoading(false);
     }
-  }, [selectConversation, token, updateConversations, searchParams]);
+  }, [token, updateConversations]);
 
   useEffect(() => {
     refreshConversations();
@@ -306,24 +293,88 @@ const Messages: React.FC = () => {
   const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? null;
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia('(min-width: 1024px)');
-    const syncSidebar = (matches: boolean) => setIsSidebarOpen(matches);
-    syncSidebar(mediaQuery.matches);
-    const listener = (event: MediaQueryListEvent) => syncSidebar(event.matches);
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', listener);
-    } else {
-      mediaQuery.addListener(listener);
+    if (!token) return;
+    if (!startCounterpartyId) {
+      processedStartRef.current = null;
+      return;
     }
-    return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', listener);
-      } else {
-        mediaQuery.removeListener(listener);
+    if (processedStartRef.current === startCounterpartyId) {
+      return;
+    }
+
+    const counterpartyId = Number(startCounterpartyId);
+    if (!Number.isFinite(counterpartyId)) {
+      const params = new URLSearchParams(searchParamsKey);
+      params.delete('start');
+      setSearchParams(params, { replace: true });
+      return;
+    }
+
+    processedStartRef.current = startCounterpartyId;
+
+    const existingConversation = conversationsRef.current.find(
+      (conversation) => conversation.counterpart.user_id === counterpartyId,
+    );
+    if (existingConversation) {
+      selectConversation(existingConversation.id);
+      const params = new URLSearchParams(searchParamsKey);
+      params.delete('start');
+      params.set('conversation', existingConversation.id);
+      setSearchParams(params, { replace: true });
+      processedStartRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    const params = new URLSearchParams(searchParamsKey);
+
+    const createAndSelect = async () => {
+      try {
+        setMessagesLoading(true);
+        setMessagesError(null);
+        const response = await createConversation(token, counterpartyId);
+        if (cancelled) return;
+        updateConversations((prev) => {
+          const exists = prev.some((conversation) => conversation.id === response.conversation.id);
+          if (exists) {
+            return prev.map((conversation) =>
+              conversation.id === response.conversation.id ? response.conversation : conversation,
+            );
+          }
+          return [...prev, response.conversation];
+        });
+        selectConversation(response.conversation.id);
+        params.delete('start');
+        params.set('conversation', response.conversation.id);
+        setSearchParams(params, { replace: true });
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+          const message = (error as Error).message;
+          setMessagesError(message);
+          if (message.toLowerCase().includes('unauth')) {
+            localStorage.removeItem('token');
+            window.dispatchEvent(new Event('auth-changed'));
+            const next = encodeURIComponent('/messages');
+            navigate(`/login?next=${next}`, { replace: true });
+          }
+          params.delete('start');
+          setSearchParams(params, { replace: true });
+        }
+      } finally {
+        if (!cancelled) {
+          setMessagesLoading(false);
+          processedStartRef.current = null;
+        }
       }
     };
-  }, []);
+
+    createAndSelect();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, selectConversation, setSearchParams, startCounterpartyId, token, updateConversations, searchParamsKey]);
 
   const background = (
     <div className="pointer-events-none absolute inset-0">
@@ -353,78 +404,40 @@ const Messages: React.FC = () => {
           </div>
         )}
 
-        <div className="relative min-h-[34rem] lg:grid lg:grid-cols-[22rem_1fr] lg:gap-6">
-          {isSidebarOpen && (
-            <button
-              type="button"
-              aria-label="Close conversations"
-              className="fixed inset-0 z-20 bg-dark-900/60 backdrop-blur-sm transition-opacity duration-500 ease-out lg:hidden"
-              onClick={() => setIsSidebarOpen(false)}
-            />
-          )}
-          <div
-            className={`fixed left-4 top-[7.5rem] z-30 w-[min(20rem,calc(100vw-2.5rem))] max-w-[22rem] transform transition-all duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] ${
-              isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-[calc(100%+1.5rem)] opacity-0 pointer-events-none'
-            } lg:static lg:left-auto lg:top-auto lg:z-auto lg:w-auto lg:max-w-none lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto`}
-          >
-            <div className="flex h-full max-h-[calc(100vh-10rem)] flex-col overflow-hidden rounded-[2.5rem] border border-white/12 bg-white/[0.05] p-5 shadow-[0_35px_120px_rgba(5,9,18,0.65)] backdrop-blur-xl lg:max-h-none">
-              {conversationsLoading ? (
-                <div className="flex h-full items-center justify-center text-sm text-white/50">
-                  Loading conversations...
-                </div>
-              ) : (
-                <ConversationList
-                  conversations={conversations}
-                  activeId={activeConversationId}
-                  onSelect={selectConversation}
-                />
-              )}
-            </div>
+        <div className="grid min-h-[34rem] gap-6 lg:grid-cols-[22rem_1fr]">
+          <div className="rounded-[2.5rem] border border-white/12 bg-white/[0.05] p-5 shadow-[0_35px_120px_rgba(5,9,18,0.65)] backdrop-blur-xl">
+            {conversationsLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-white/50">
+                Loading conversations...
+              </div>
+            ) : (
+              <ConversationList
+                conversations={conversations}
+                activeId={activeConversationId}
+                onSelect={selectConversation}
+              />
+            )}
           </div>
 
-          <div className="relative min-h-[34rem] lg:ml-0">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen((prev) => !prev)}
-              aria-label={isSidebarOpen ? 'Hide conversations' : 'Show conversations'}
-              className="group absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white shadow-[0_14px_38px_rgba(5,9,18,0.55)] transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-dark-900 lg:hidden"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className={`h-5 w-5 transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] ${
-                  isSidebarOpen ? 'rotate-180' : ''
-                }`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 5 16 12 8 19" />
-              </svg>
-            </button>
-
-            <div className="mt-14 lg:mt-0">
-              {activeConversation ? (
-                <ChatWindow
-                  messages={messages}
-                  counterpartId={activeConversation.counterpart.user_id}
-                  onSend={handleSendMessage}
-                  onLoadMore={messagesHasMore ? handleLoadOlder : undefined}
-                  hasMore={messagesHasMore}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center rounded-[2.5rem] border border-white/12 bg-white/[0.04] px-8 py-12 text-center text-sm text-white/60 shadow-[0_35px_120px_rgba(5,9,18,0.65)]">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
-                      {t('messages.emptyListHeading')}
-                    </p>
-                    <p className="mt-3 text-sm text-white/60">{t('messages.emptyListBody')}</p>
-                  </div>
+          <div className="relative min-h-[34rem]">
+            {activeConversation ? (
+              <ChatWindow
+                messages={messages}
+                counterpartId={activeConversation.counterpart.user_id}
+                onSend={handleSendMessage}
+                onLoadMore={messagesHasMore ? handleLoadOlder : undefined}
+                hasMore={messagesHasMore}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center rounded-[2.5rem] border border-white/12 bg-white/[0.04] px-8 py-12 text-center text-sm text-white/60 shadow-[0_35px_120px_rgba(5,9,18,0.65)]">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
+                    {t('messages.emptyListHeading')}
+                  </p>
+                  <p className="mt-3 text-sm text-white/60">{t('messages.emptyListBody')}</p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
             {messagesLoading && (
               <div className="pointer-events-none absolute inset-0 flex items-end justify-end p-6">
                 <div className="rounded-2xl border border-white/10 bg-dark-900/80 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
