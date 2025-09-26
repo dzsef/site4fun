@@ -39,6 +39,12 @@ const Messages: React.FC = () => {
   const [messagesError, setMessagesError] = useState<string | null>(null);
 
   const [socketStatus, setSocketStatus] = useState<'idle' | 'connected' | 'error'>('idle');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
 
   useEffect(() => {
     if (!token) {
@@ -82,8 +88,11 @@ const Messages: React.FC = () => {
         params.delete('conversation');
       }
       setSearchParams(params, { replace: true });
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      }
     },
-    [searchParams, setSearchParams],
+    [searchParams, setIsSidebarOpen, setSearchParams],
   );
 
   const refreshConversations = useCallback(async () => {
@@ -296,6 +305,26 @@ const Messages: React.FC = () => {
 
   const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? null;
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const syncSidebar = (matches: boolean) => setIsSidebarOpen(matches);
+    syncSidebar(mediaQuery.matches);
+    const listener = (event: MediaQueryListEvent) => syncSidebar(event.matches);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', listener);
+    } else {
+      mediaQuery.addListener(listener);
+    }
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', listener);
+      } else {
+        mediaQuery.removeListener(listener);
+      }
+    };
+  }, []);
+
   const background = (
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute -left-32 top-28 h-[38rem] w-[38rem] rounded-full bg-primary/12 blur-[170px]" />
@@ -324,40 +353,78 @@ const Messages: React.FC = () => {
           </div>
         )}
 
-        <div className="grid min-h-[34rem] gap-6 lg:grid-cols-[22rem_1fr]">
-          <div className="rounded-[2.5rem] border border-white/12 bg-white/[0.05] p-5 shadow-[0_35px_120px_rgba(5,9,18,0.65)] backdrop-blur-xl">
-            {conversationsLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-white/50">
-                Loading conversations...
-              </div>
-            ) : (
-              <ConversationList
-                conversations={conversations}
-                activeId={activeConversationId}
-                onSelect={selectConversation}
-              />
-            )}
+        <div className="relative min-h-[34rem] lg:grid lg:grid-cols-[22rem_1fr] lg:gap-6">
+          {isSidebarOpen && (
+            <button
+              type="button"
+              aria-label="Close conversations"
+              className="fixed inset-0 z-20 bg-dark-900/60 backdrop-blur-sm transition-opacity duration-500 ease-out lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+          <div
+            className={`fixed left-4 top-[7.5rem] z-30 w-[min(20rem,calc(100vw-2.5rem))] max-w-[22rem] transform transition-all duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] ${
+              isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-[calc(100%+1.5rem)] opacity-0 pointer-events-none'
+            } lg:static lg:left-auto lg:top-auto lg:z-auto lg:w-auto lg:max-w-none lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto`}
+          >
+            <div className="flex h-full max-h-[calc(100vh-10rem)] flex-col overflow-hidden rounded-[2.5rem] border border-white/12 bg-white/[0.05] p-5 shadow-[0_35px_120px_rgba(5,9,18,0.65)] backdrop-blur-xl lg:max-h-none">
+              {conversationsLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-white/50">
+                  Loading conversations...
+                </div>
+              ) : (
+                <ConversationList
+                  conversations={conversations}
+                  activeId={activeConversationId}
+                  onSelect={selectConversation}
+                />
+              )}
+            </div>
           </div>
 
-          <div className="relative min-h-[34rem]">
-            {activeConversation ? (
-              <ChatWindow
-                messages={messages}
-                counterpartId={activeConversation.counterpart.user_id}
-                onSend={handleSendMessage}
-                onLoadMore={messagesHasMore ? handleLoadOlder : undefined}
-                hasMore={messagesHasMore}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center rounded-[2.5rem] border border-white/12 bg-white/[0.04] px-8 py-12 text-center text-sm text-white/60 shadow-[0_35px_120px_rgba(5,9,18,0.65)]">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
-                    {t('messages.emptyListHeading')}
-                  </p>
-                  <p className="mt-3 text-sm text-white/60">{t('messages.emptyListBody')}</p>
+          <div className="relative min-h-[34rem] lg:ml-0">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              aria-label={isSidebarOpen ? 'Hide conversations' : 'Show conversations'}
+              className="group absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white shadow-[0_14px_38px_rgba(5,9,18,0.55)] transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-dark-900 lg:hidden"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className={`h-5 w-5 transition-transform duration-500 [transition-timing-function:cubic-bezier(.34,1.56,.64,1)] ${
+                  isSidebarOpen ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M8 5 16 12 8 19" />
+              </svg>
+            </button>
+
+            <div className="mt-14 lg:mt-0">
+              {activeConversation ? (
+                <ChatWindow
+                  messages={messages}
+                  counterpartId={activeConversation.counterpart.user_id}
+                  onSend={handleSendMessage}
+                  onLoadMore={messagesHasMore ? handleLoadOlder : undefined}
+                  hasMore={messagesHasMore}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-[2.5rem] border border-white/12 bg-white/[0.04] px-8 py-12 text-center text-sm text-white/60 shadow-[0_35px_120px_rgba(5,9,18,0.65)]">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
+                      {t('messages.emptyListHeading')}
+                    </p>
+                    <p className="mt-3 text-sm text-white/60">{t('messages.emptyListBody')}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             {messagesLoading && (
               <div className="pointer-events-none absolute inset-0 flex items-end justify-end p-6">
                 <div className="rounded-2xl border border-white/10 bg-dark-900/80 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-white/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
