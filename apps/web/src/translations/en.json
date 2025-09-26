@@ -110,7 +110,27 @@
     "tagline": "Premium collaboration hub",
     "hero": {
       "title": "Shape construction partnerships with clarity",
-      "subtitle": "Choose the journey that fits your role and access tools designed for transparent, modern project delivery."
+      "subtitle": "Choose the journey that fits your role and access tools designed for transparent, modern project delivery.",
+      "ctaPrimary": "Create your workspace",
+      "ctaSecondary": "Explore contractor hub",
+      "metrics": {
+        "projects": {
+          "value": "2.3k+",
+          "label": "Projects coordinated on Osus"
+        },
+        "response": {
+          "value": "< 4h",
+          "label": "Average response alignment"
+        },
+        "rating": {
+          "value": "4.9/5",
+          "label": "Satisfaction across project roles"
+        }
+      }
+    },
+    "personaSection": {
+      "title": "Molds itself to every role on site",
+      "subtitle": "Purpose-built workspaces give homeowners, contractors, and subcontractors the clarity they need without compromising momentum."
     },
     "personas": {
       "homeowner": {
@@ -128,6 +148,58 @@
         "description": "Showcase your craft, receive precise briefs, and stay synced with the site in real time.",
         "cta": "Continue as subcontractor"
       }
+    },
+    "features": {
+      "tagline": "Operational excellence",
+      "title": "A high-fidelity command centre for modern builds",
+      "subtitle": "Replace scattered threads with one connected fabric that keeps every decision traceable.",
+      "items": {
+        "pipeline": {
+          "title": "Unified pipeline oversight",
+          "description": "Forecast every project stage with live status boards, capacity signals, and budget indicators synchronized across teams."
+        },
+        "visibility": {
+          "title": "Context-rich visibility",
+          "description": "Surface the right data to the right people, from homeowners tracking approvals to subcontractors receiving fresh site directives."
+        },
+        "handover": {
+          "title": "Effortless handovers",
+          "description": "Structured closeout packs bundle documents, photos, and punch lists so transitions feel seamless instead of stressful."
+        },
+        "compliance": {
+          "title": "Built-in compliance",
+          "description": "Smart reminders and digital sign-offs reduce risk by keeping certifications, insurance, and safety logs current automatically."
+        }
+      }
+    },
+    "workflow": {
+      "title": "A guided journey from first idea to site handover",
+      "subtitle": "Every stakeholder walks the same illuminated path, with automation handling the guardrails.",
+      "steps": {
+        "discover": {
+          "title": "Discover actionable opportunities",
+          "description": "Match with projects and specialists that align with your standards, location, and delivery cadence."
+        },
+        "assemble": {
+          "title": "Assemble the right team instantly",
+          "description": "Invite collaborators into dedicated workspaces, assign responsibilities, and unlock shared tooling in one motion."
+        },
+        "deliver": {
+          "title": "Deliver and document flawlessly",
+          "description": "Track progress, manage change orders, and package closeout artefacts with a timeline that stays audit-ready."
+        }
+      }
+    },
+    "testimonial": {
+      "quote": "“Osus let us collapse weeks of manual coordination into clear, unified workflows. Every partner stays aligned without chasing updates.”",
+      "author": "Sienna Ward",
+      "role": "Director of Operations, Apex Build Collective"
+    },
+    "final": {
+      "title": "Ready to architect your signature build experience?",
+      "subtitle": "Bring every stakeholder into a single source of truth and deliver projects that feel orchestrated, not improvised.",
+      "primaryCta": "Launch my workspace",
+      "secondaryCta": "Preview the messaging suite"
     },
     "benefits": {
       "trust": {
