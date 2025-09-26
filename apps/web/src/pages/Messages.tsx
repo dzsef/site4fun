@@ -57,6 +57,19 @@ const Messages: React.FC = () => {
 
   const selectConversation = useCallback(
     (conversationId: string | null) => {
+      if (conversationId === activeConversationIdRef.current) {
+        const params = new URLSearchParams(searchParams);
+        if (conversationId) {
+          if (params.get('conversation') !== conversationId) {
+            params.set('conversation', conversationId);
+            setSearchParams(params, { replace: true });
+          }
+        } else if (params.has('conversation')) {
+          params.delete('conversation');
+          setSearchParams(params, { replace: true });
+        }
+        return;
+      }
       setActiveConversationId(conversationId);
       activeConversationIdRef.current = conversationId;
       setMessages([]);
