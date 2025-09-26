@@ -110,7 +110,27 @@
     "tagline": "Prémium együttműködési központ",
     "hero": {
       "title": "Átlátható együttműködés az építőiparban",
-      "subtitle": "Válaszd ki a hozzád illő szerepkört, és használd azokat az eszközöket, amelyek modern és tiszta folyamatokat biztosítanak."
+      "subtitle": "Válaszd ki a hozzád illő szerepkört, és használd azokat az eszközöket, amelyek modern és tiszta folyamatokat biztosítanak.",
+      "ctaPrimary": "Hozd létre a munkatered",
+      "ctaSecondary": "Fedezd fel a fővállalkozói központot",
+      "metrics": {
+        "projects": {
+          "value": "2,3k+",
+          "label": "Projekt koordinálva az Osuson"
+        },
+        "response": {
+          "value": "< 4 óra",
+          "label": "Átlagos reagálási igazítás"
+        },
+        "rating": {
+          "value": "4,9/5",
+          "label": "Elégedettség minden szerepkörben"
+        }
+      }
+    },
+    "personaSection": {
+      "title": "Minden szerephez alkalmazkodik",
+      "subtitle": "A dedikált felületek pontosan azt a rálátást adják a tulajdonosoknak, kivitelezőknek és alvállalkozóknak, amire a lendület megtartásához szükségük van."
     },
     "personas": {
       "homeowner": {
@@ -128,6 +148,58 @@
         "description": "Megmutathatod a szakértelmed, pontos briefeket kapsz, és valós időben kapcsolódsz az építkezéshez.",
         "cta": "Belépés alvállalkozóként"
       }
+    },
+    "features": {
+      "tagline": "Működési kiválóság",
+      "title": "Egy nagy felbontású irányítóközpont a modern kivitelezéshez",
+      "subtitle": "A szétszórt csatornák helyett egyetlen összefűzött rendszer, ahol minden döntés nyomon követhető marad.",
+      "items": {
+        "pipeline": {
+          "title": "Egységes pipeline-felügyelet",
+          "description": "Élő státuszfalak, kapacitás jelzések és költségfigyelők mutatják minden szakasz előrejelzését közös ritmusban."
+        },
+        "visibility": {
+          "title": "Környezetbe ágyazott rálátás",
+          "description": "Mindig a megfelelő adat jut el a megfelelő emberhez – a jóváhagyást váró tulajdonostól a friss utasítást kapó alvállalkozóig."
+        },
+        "handover": {
+          "title": "Megtervezett átadások",
+          "description": "A strukturált lezáró csomagok dokumentumokat, fotókat és punchlistákat rendeznek össze, így a váltás gördülékeny marad."
+        },
+        "compliance": {
+          "title": "Beépített megfelelőség",
+          "description": "Okos emlékeztetők és digitális jóváhagyások tartják naprakészen az engedélyeket, biztosításokat és biztonsági naplókat."
+        }
+      }
+    },
+    "workflow": {
+      "title": "Végigvezet a gondolattól az átadásig",
+      "subtitle": "Minden érintett ugyanazon a megvilágított útvonalon halad, miközben az automatizmusok tartják a korlátokat.",
+      "steps": {
+        "discover": {
+          "title": "Felfedezed a releváns lehetőségeket",
+          "description": "Olyan projektekhez és szakemberekhez kapcsolódsz, amelyek illenek az elvárásaidhoz, lokációdhoz és tempódhoz."
+        },
+        "assemble": {
+          "title": "Összeállítod a megfelelő csapatot",
+          "description": "Meghívhatod a közreműködőket dedikált munkaterületekre, kioszthatod a felelősséget, és egy lépésben megnyitod az eszközöket."
+        },
+        "deliver": {
+          "title": "Szállítasz és dokumentálsz hibátlanul",
+          "description": "Nyomon követheted az előrehaladást, kezeled a módosításokat, és audit-kész idővonalra fűzheted a lezáró anyagokat."
+        }
+      }
+    },
+    "testimonial": {
+      "quote": "„Az Osus hetekig tartó kézi egyeztetést váltott ki letisztult, egységes folyamatokkal. Minden partner képben marad anélkül, hogy futnunk kéne az információk után.”",
+      "author": "Sienna Ward",
+      "role": "Működési igazgató, Apex Build Collective"
+    },
+    "final": {
+      "title": "Készen állsz egy új szintű projektélményre?",
+      "subtitle": "Gyűjtsd össze az összes érintettet egyetlen igazságforrásba, és szállíts olyan projekteket, amelyek szervezettek, nem rögtönzöttek.",
+      "primaryCta": "Indítom a munkateret",
+      "secondaryCta": "Próbáld ki az üzenetkezelőt"
     },
     "benefits": {
       "trust": {
