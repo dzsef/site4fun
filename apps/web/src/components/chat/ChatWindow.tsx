@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '../../types/chat';
 
@@ -21,6 +21,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, counterpartId, onSend
   const [busy, setBusy] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const previousMessageCount = useRef<number>(0);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     if (!viewportRef.current) return;
@@ -37,17 +38,37 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, counterpartId, onSend
     previousMessageCount.current = messages.length;
   }, [messages]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!draft.trim()) return;
+  const sendDraft = useCallback(async () => {
+    const trimmed = draft.trim();
+    if (!trimmed || busyRef.current) return;
     try {
+      busyRef.current = true;
       setBusy(true);
-      await onSend(draft.trim());
+      await onSend(trimmed);
       setDraft('');
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
-  };
+  }, [draft, onSend]);
+
+  const handleSubmit = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      await sendDraft();
+    },
+    [sendDraft],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        void sendDraft();
+      }
+    },
+    [sendDraft],
+  );
 
   return (
     <div className="flex h-full flex-col rounded-[2.5rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_30px_120px_rgba(5,9,18,0.7)]">
@@ -100,6 +121,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, counterpartId, onSend
           <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={t('messages.composerPlaceholder')}
             className="h-16 flex-1 resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-white/40 shadow-[0_15px_50px_rgba(3,7,18,0.55)] focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
