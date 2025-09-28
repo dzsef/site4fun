@@ -18,11 +18,17 @@ def _sync_database_url(url: str) -> str:
     return url
 
 
+def _alembic_safe_url(url: str) -> str:
+    """Escape percent signs so configparser does not treat them as templates."""
+    return url.replace("%", "%%")
+
+
 def run_migrations() -> None:
     base_dir = Path(__file__).resolve().parent.parent
     alembic_cfg = Config(str(base_dir / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(base_dir / "alembic"))
-    alembic_cfg.set_main_option("sqlalchemy.url", _sync_database_url(DATABASE_URL))
+    escaped_url = _alembic_safe_url(_sync_database_url(DATABASE_URL))
+    alembic_cfg.set_main_option("sqlalchemy.url", escaped_url)
     command.upgrade(alembic_cfg, "head")
 
 
