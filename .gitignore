@@ -1,3 +1,6 @@
 .env
 node_modules
 apps/api/app/media/
+nginx/default.conf
+nginx/default.prod.conf
+
