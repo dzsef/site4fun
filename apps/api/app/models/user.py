@@ -37,3 +37,17 @@ class User(Base):
         uselist=False,
         lazy="selectin",
     )
+
+
+class PendingUser(Base):
+    """Temporary storage for users awaiting email confirmation."""
+
+    __tablename__ = "pending_users"
+
+    id: int = Column(Integer, primary_key=True, index=True)
+    email: str = Column(String, unique=True, index=True, nullable=False)
+    hashed_password: str = Column(String, nullable=False)
+    role: str = Column(String, nullable=False)
+    token: str = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)

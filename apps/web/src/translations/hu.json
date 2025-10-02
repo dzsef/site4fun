@@ -340,7 +340,30 @@
       "subcontractor": {
         "caption": "Mutasd meg a szakmai energiád, elérhetőségedet és referenciáidat egyetlen megosztással."
       }
+    },
+    "successTitle": "Erősítsd meg az emailed",
+    "successHint": "Elküldtük a megerősítő levelet. Kattints a linkre, hogy aktiváld a fiókodat.",
+    "goToLogin": "Ugorj a bejelentkezéshez",
+    "registerAgain": "Új regisztráció indítása",
+    "successFallback": "Nézd meg a postaládád és erősítsd meg az email címed a folytatáshoz.",
+    "errors": {
+      "generic": "A regisztráció nem sikerült. Próbáld újra."
     }
+  },
+  "verifyEmail": {
+    "title": "Email megerősítés",
+    "loading": "Aktiváljuk a fiókodat...",
+    "successHeading": "Email cím megerősítve",
+    "success": "A fiókod aktív, most már bejelentkezhetsz és folytathatod a munkát.",
+    "successWithRole": "A(z) {{role}} munkatered elérhető. Jelentkezz be és folytasd a közös munkát.",
+    "goToLogin": "Tovább a bejelentkezéshez",
+    "errorHeading": "Nem sikerült megerősíteni az emailed",
+    "errors": {
+      "missingToken": "A megerősítő link hiányos. Használd az emailben kapott teljes linket.",
+      "generic": "A megerősítés nem sikerült. Kérj új megerősítő emailt."
+    },
+    "retryRegistration": "Regisztráció újraindítása",
+    "backToHome": "Vissza a kezdőlapra"
   },
   "footer": {
     "disclaimer": "A weboldalon található adatok tájékoztató jellegűek."

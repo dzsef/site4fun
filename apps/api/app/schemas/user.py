@@ -22,3 +22,11 @@ class UserOut(UserBase):
 
     class Config:
         orm_mode = True
+
+
+class RegistrationResponse(BaseModel):
+    message: str
+
+
+class ConfirmEmailRequest(BaseModel):
+    token: constr(min_length=10)

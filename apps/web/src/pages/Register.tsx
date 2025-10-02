@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 // We avoid useMutation here to prevent version-related errors
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 // Validation schema for registration
@@ -48,13 +48,15 @@ const roleOptions: RoleOption[] = [
 
 const Register: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const {
     register: registerField,
     handleSubmit,
     formState,
     setValue,
     watch,
+    reset,
   } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
     defaultValues: { role: 'homeowner' },
@@ -64,6 +66,7 @@ const Register: React.FC = () => {
 
   const onSubmit = async (data: RegisterData) => {
     try {
+      setErrorMessage(null);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
       const res = await fetch(`${baseUrl}/auth/register`, {
         method: 'POST',
@@ -72,12 +75,14 @@ const Register: React.FC = () => {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.detail || 'Registration failed');
+        throw new Error(err?.detail || t('register.errors.generic'));
       }
-      navigate('/login');
+      const payload = await res.json().catch(() => null);
+      setSuccessMessage(payload?.message || t('register.successFallback'));
+      reset({ email: '', password: '', role: selectedRole });
     } catch (err) {
       console.error(err);
-      alert((err as Error).message || 'Registration failed');
+      setErrorMessage((err as Error).message || t('register.errors.generic'));
     }
   };
 
@@ -144,81 +149,118 @@ const Register: React.FC = () => {
               <div className="absolute -bottom-30 left-[-14%] h-64 w-64 rounded-full bg-emerald-400/14 blur-3xl" />
             </div>
             <div className="relative z-10 space-y-8">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-                <input type="hidden" value={selectedRole} readOnly {...registerField('role')} />
-
-                <div className="space-y-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.32em] text-white/55">
-                    {t('register.role')}
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {roleOptions.map(({ key, hue, accent, captionKey }) => {
-                      const active = selectedRole === key;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setRole(key)}
-                          className={`group relative overflow-hidden rounded-3xl border border-white/12 px-4 py-5 text-left shadow-[0_26px_70px_rgba(3,7,18,0.55)] transition-all duration-500 ease-[cubic-bezier(.22,1.61,.36,1)] hover:-translate-y-1 hover:scale-[1.01] ${
-                            active ? 'bg-white/10' : 'bg-[#0D1423]'
-                          }`}
-                        >
-                          <span
-                            className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-0 transition-opacity duration-500 ${
-                              active ? 'opacity-100' : 'group-hover:opacity-70'
-                            } ${hue}`}
-                          />
-                          <span className="pointer-events-none absolute -left-12 top-1/2 h-28 w-28 -translate-y-1/2 rounded-full bg-white/10 blur-3xl" />
-                          <div className="relative z-10 space-y-2">
-                            <span className={`text-[0.65rem] font-semibold uppercase tracking-[0.32em] ${accent}`}>
-                              {t(`register.${key}`)}
-                            </span>
-                            <p className="text-xs text-white/70">
-                              {t(`register.roles.${captionKey}.caption`)}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
+              {successMessage ? (
+                <div className="space-y-8 text-center">
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300/80">
+                      {t('register.successTitle')}
+                    </p>
+                    <p className="text-base text-white/80">{successMessage}</p>
                   </div>
+                  <div className="space-y-4">
+                    <p className="text-sm text-white/65">{t('register.successHint')}</p>
+                    <Link
+                      to="/login"
+                      className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.28em] text-dark-900 transition hover:bg-white"
+                    >
+                      {t('register.goToLogin')}
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccessMessage(null);
+                      setErrorMessage(null);
+                      reset({ email: '', password: '', role: 'homeowner' });
+                    }}
+                    className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60 underline underline-offset-4 transition hover:text-white"
+                  >
+                    {t('register.registerAgain')}
+                  </button>
                 </div>
+              ) : (
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
+                  <input type="hidden" value={selectedRole} readOnly {...registerField('role')} />
 
-                <div className="space-y-6 rounded-3xl border border-white/10 bg-[#0B121F] p-6 shadow-[0_26px_80px_rgba(3,7,18,0.6)]">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
-                      {t('form.email')}
-                    </label>
-                    <input
-                      {...registerField('email')}
-                      className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
-                    />
-                    {errors.email && (
-                      <p className="text-xs font-medium text-rose-300">{errors.email.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
-                      {t('form.password')}
-                    </label>
-                    <input
-                      type="password"
-                      {...registerField('password')}
-                      className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
-                    />
-                    {errors.password && (
-                      <p className="text-xs font-medium text-rose-300">{errors.password.message}</p>
-                    )}
-                  </div>
-                </div>
+                  {errorMessage && (
+                    <div className="rounded-2xl border border-rose-500/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                      {errorMessage}
+                    </div>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={formState.isSubmitting}
-                  className="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 via-primary to-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {formState.isSubmitting ? t('form.sending') : t('register.submit')}
-                </button>
-              </form>
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.32em] text-white/55">
+                      {t('register.role')}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {roleOptions.map(({ key, hue, accent, captionKey }) => {
+                        const active = selectedRole === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setRole(key)}
+                            className={`group relative overflow-hidden rounded-3xl border border-white/12 px-4 py-5 text-left shadow-[0_26px_70px_rgba(3,7,18,0.55)] transition-all duration-500 ease-[cubic-bezier(.22,1.61,.36,1)] hover:-translate-y-1 hover:scale-[1.01] ${
+                              active ? 'bg-white/10' : 'bg-[#0D1423]'
+                            }`}
+                          >
+                            <span
+                              className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-0 transition-opacity duration-500 ${
+                                active ? 'opacity-100' : 'group-hover:opacity-70'
+                              } ${hue}`}
+                            />
+                            <span className="pointer-events-none absolute -left-12 top-1/2 h-28 w-28 -translate-y-1/2 rounded-full bg-white/10 blur-3xl" />
+                            <div className="relative z-10 space-y-2">
+                              <span className={`text-[0.65rem] font-semibold uppercase tracking-[0.32em] ${accent}`}>
+                                {t(`register.${key}`)}
+                              </span>
+                              <p className="text-xs text-white/70">
+                                {t(`register.roles.${captionKey}.caption`)}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 rounded-3xl border border-white/10 bg-[#0B121F] p-6 shadow-[0_26px_80px_rgba(3,7,18,0.6)]">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                        {t('form.email')}
+                      </label>
+                      <input
+                        {...registerField('email')}
+                        className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                      />
+                      {errors.email && (
+                        <p className="text-xs font-medium text-rose-300">{errors.email.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                        {t('form.password')}
+                      </label>
+                      <input
+                        type="password"
+                        {...registerField('password')}
+                        className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                      />
+                      {errors.password && (
+                        <p className="text-xs font-medium text-rose-300">{errors.password.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={formState.isSubmitting}
+                    className="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 via-primary to-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {formState.isSubmitting ? t('form.sending') : t('register.submit')}
+                  </button>
+                </form>
+              )}
 
               <p className="text-center text-xs text-white/55">
                 {t('register.haveAccount')} {' '}

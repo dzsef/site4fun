@@ -340,7 +340,30 @@
       "subcontractor": {
         "caption": "Broadcast your craft with availability telemetry in a single share."
       }
+    },
+    "successTitle": "Confirm your email",
+    "successHint": "We've sent a confirmation email. Click the link inside to activate your account.",
+    "goToLogin": "Go to login",
+    "registerAgain": "Start a new registration",
+    "successFallback": "Check your inbox and confirm your email address to continue.",
+    "errors": {
+      "generic": "Registration failed. Please try again."
     }
+  },
+  "verifyEmail": {
+    "title": "Email verification",
+    "loading": "We're activating your workspace...",
+    "successHeading": "Email confirmed",
+    "success": "Your account is now active. You can sign in and start collaborating.",
+    "successWithRole": "Your {{role}} workspace is live. You can sign in and start collaborating.",
+    "goToLogin": "Proceed to login",
+    "errorHeading": "We couldn't confirm your email",
+    "errors": {
+      "missingToken": "The verification link is incomplete. Please use the link from your email.",
+      "generic": "Verification failed. Please request a new confirmation email."
+    },
+    "retryRegistration": "Restart registration",
+    "backToHome": "Back to home"
   },
   "footer": {
     "disclaimer": "All information on this site is for general purposes only."

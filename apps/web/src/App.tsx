@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import ContractorHub from './pages/ContractorHub';
 import ContractorCrew from './pages/ContractorCrew';
 import Messages from './pages/Messages';
+import VerifyEmail from './pages/VerifyEmail';
 import Footer from './components/Footer';
 import ProfileSidebar from './components/ProfileSidebar';
 
@@ -19,6 +20,7 @@ const AppShell: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/contractor" element={<ContractorHub />} />
           <Route path="/contractor/crew" element={<ContractorCrew />} />
           <Route path="/profile" element={<Profile />} />
