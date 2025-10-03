@@ -4,11 +4,20 @@ export type AvailabilitySlot = {
   end_time: string;
 };
 
+export type BusinessLocation = {
+  country: string;
+  province: string | null;
+  cities: string[];
+};
+
 export type ContractorProfile = {
-  name: string | null;
-  country: string | null;
-  city: string | null;
-  company_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  business_name: string | null;
+  business_location: BusinessLocation | null;
+  birthday: string | null;
+  gender: string | null;
+  years_in_business: number | null;
   image_url: string | null;
 };
 
@@ -33,6 +42,6 @@ export type HomeownerProfile = {
 };
 
 export type ProfileResponse =
-  | { role: 'contractor'; profile: ContractorProfile }
+  | { role: 'contractor'; profile: ContractorProfile; email?: string; username?: string }
   | { role: 'subcontractor'; profile: SubcontractorProfile }
   | { role: 'homeowner'; profile: HomeownerProfile };

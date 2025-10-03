@@ -5,6 +5,7 @@ and a timestamp of when they were created.
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from ..db import Base
@@ -17,6 +18,7 @@ class User(Base):
     email: str = Column(String, unique=True, index=True, nullable=False)
     hashed_password: str = Column(String, nullable=False)
     role: str = Column(String, nullable=False)
+    username: str = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     contractor_profile = relationship(
@@ -48,6 +50,8 @@ class PendingUser(Base):
     email: str = Column(String, unique=True, index=True, nullable=False)
     hashed_password: str = Column(String, nullable=False)
     role: str = Column(String, nullable=False)
+    username: str = Column(String, unique=True, index=True, nullable=True)
+    profile_payload = Column(JSONB, nullable=True)
     token: str = Column(String, unique=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)

@@ -7,13 +7,93 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 // Validation schema for registration
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  role: z.enum(['homeowner', 'contractor', 'subcontractor']),
+const contractorProfileSchema = z.object({
+  username: z.string().min(3).max(64),
+  first_name: z.string().min(1),
+  last_name: z.string().min(1),
+  business_name: z.string().min(1),
+  business_country: z.string().min(1),
+  business_province: z.string().optional(),
+  business_cities: z.array(z.string().min(1)).min(1),
+  birthday: z.string().optional(),
+  gender: z.string().optional(),
+  years_in_business: z.string().optional(),
 });
 
+const registerSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    role: z.enum(['homeowner', 'contractor', 'subcontractor']),
+    contractor_profile: contractorProfileSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === 'contractor') {
+      if (!data.contractor_profile) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Provide your contractor details.',
+          path: ['contractor_profile'],
+        });
+        return;
+      }
+      const profile = data.contractor_profile;
+      const years = profile.years_in_business?.trim();
+      if (years) {
+        const parsed = Number(years);
+        if (Number.isNaN(parsed) || parsed < 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Years in business must be a non-negative number.',
+            path: ['contractor_profile', 'years_in_business'],
+          });
+        }
+      }
+      if (!profile.business_cities || profile.business_cities.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Add at least one city.',
+          path: ['contractor_profile', 'business_cities'],
+        });
+      }
+      if (profile.birthday && profile.birthday.trim()) {
+        const value = profile.birthday.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Invalid date format.',
+            path: ['contractor_profile', 'birthday'],
+          });
+        } else {
+          const today = new Date().toISOString().slice(0, 10);
+          if (value >= today) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Birthday must be in the past.',
+              path: ['contractor_profile', 'birthday'],
+            });
+          }
+        }
+      }
+    }
+  });
+
 type RegisterData = z.infer<typeof registerSchema>;
+
+type ContractorRegistrationProfile = z.infer<typeof contractorProfileSchema>;
+
+const createEmptyContractorProfile = (): ContractorRegistrationProfile => ({
+  username: '',
+  first_name: '',
+  last_name: '',
+  business_name: '',
+  business_country: '',
+  business_province: '',
+  business_cities: [],
+  birthday: '',
+  gender: '',
+  years_in_business: '',
+});
 
 type RoleOption = {
   key: RegisterData['role'];
@@ -57,29 +137,129 @@ const Register: React.FC = () => {
     setValue,
     watch,
     reset,
+    clearErrors,
   } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: 'homeowner' },
+    defaultValues: {
+      email: '',
+      password: '',
+      role: 'homeowner',
+      contractor_profile: createEmptyContractorProfile(),
+    },
   });
   const { errors } = formState;
   const selectedRole = watch('role');
+  const contractorCities = watch('contractor_profile.business_cities') ?? [];
+  const [cityDraft, setCityDraft] = React.useState('');
+  const genderOptions = React.useMemo(
+    () => [
+      { value: '', label: t('profile.contractor.genderOptions.undefined') },
+      { value: 'female', label: t('profile.contractor.genderOptions.female') },
+      { value: 'male', label: t('profile.contractor.genderOptions.male') },
+      { value: 'non-binary', label: t('profile.contractor.genderOptions.nonBinary') },
+      { value: 'prefer-not-to-say', label: t('profile.contractor.genderOptions.noAnswer') },
+    ],
+    [t],
+  );
+  const maxBirthday = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const addCity = () => {
+    if (selectedRole !== 'contractor') return;
+    const normalized = cityDraft.trim();
+    if (!normalized) return;
+    const exists = contractorCities.some((city) => city.toLowerCase() === normalized.toLowerCase());
+    if (exists) {
+      setCityDraft('');
+      return;
+    }
+    const updated = [...contractorCities, normalized];
+    setValue('contractor_profile.business_cities', updated, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+    clearErrors('contractor_profile.business_cities');
+    setCityDraft('');
+  };
+
+  const removeCity = (index: number) => {
+    if (selectedRole !== 'contractor') return;
+    const updated = contractorCities.filter((_, idx) => idx !== index);
+    setValue('contractor_profile.business_cities', updated, {
+      shouldDirty: true,
+      shouldValidate: true,
+      shouldTouch: true,
+    });
+  };
+
+  const handleCityKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addCity();
+      return;
+    }
+    if (event.key === 'Backspace' && !cityDraft && contractorCities.length > 0) {
+      event.preventDefault();
+      removeCity(contractorCities.length - 1);
+    }
+  };
+
+  const contractorProfileError =
+    errors.contractor_profile && 'message' in errors.contractor_profile
+      ? (errors.contractor_profile.message as string | undefined)
+      : null;
 
   const onSubmit = async (data: RegisterData) => {
     try {
       setErrorMessage(null);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const payload: Record<string, unknown> = {
+        email: data.email,
+        password: data.password,
+        role: data.role,
+      };
+
+      if (data.role === 'contractor' && data.contractor_profile) {
+        const profile = data.contractor_profile;
+        const trimmedCities = (profile.business_cities ?? [])
+          .map((city) => city.trim())
+          .filter((city) => city.length > 0);
+        payload.contractor_profile = {
+          username: profile.username.trim(),
+          first_name: profile.first_name.trim(),
+          last_name: profile.last_name.trim(),
+          business_name: profile.business_name.trim(),
+          business_location: {
+            country: profile.business_country.trim(),
+            province: profile.business_province?.trim() || undefined,
+            cities: trimmedCities,
+          },
+          birthday: profile.birthday?.trim() ? profile.birthday.trim() : undefined,
+          gender: profile.gender?.trim() ? profile.gender.trim() : undefined,
+          years_in_business: profile.years_in_business?.trim()
+            ? Number(profile.years_in_business.trim())
+            : undefined,
+        };
+      }
+
       const res = await fetch(`${baseUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.detail || t('register.errors.generic'));
       }
-      const payload = await res.json().catch(() => null);
-      setSuccessMessage(payload?.message || t('register.successFallback'));
-      reset({ email: '', password: '', role: selectedRole });
+      const responsePayload = await res.json().catch(() => null);
+      setSuccessMessage(responsePayload?.message || t('register.successFallback'));
+      reset({
+        email: '',
+        password: '',
+        role: selectedRole,
+        contractor_profile: createEmptyContractorProfile(),
+      });
+      setCityDraft('');
     } catch (err) {
       console.error(err);
       setErrorMessage((err as Error).message || t('register.errors.generic'));
@@ -88,6 +268,22 @@ const Register: React.FC = () => {
 
   const setRole = (role: RegisterData['role']) => {
     setValue('role', role, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+    if (role !== 'contractor') {
+      setValue('contractor_profile', createEmptyContractorProfile(), {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      });
+      setCityDraft('');
+      clearErrors('contractor_profile');
+    } else {
+      setValue('contractor_profile', createEmptyContractorProfile(), {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      });
+      setCityDraft('');
+    }
   };
 
   return (
@@ -171,7 +367,13 @@ const Register: React.FC = () => {
                     onClick={() => {
                       setSuccessMessage(null);
                       setErrorMessage(null);
-                      reset({ email: '', password: '', role: 'homeowner' });
+                      reset({
+                        email: '',
+                        password: '',
+                        role: 'homeowner',
+                        contractor_profile: createEmptyContractorProfile(),
+                      });
+                      setCityDraft('');
                     }}
                     className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60 underline underline-offset-4 transition hover:text-white"
                   >
@@ -250,6 +452,252 @@ const Register: React.FC = () => {
                         <p className="text-xs font-medium text-rose-300">{errors.password.message}</p>
                       )}
                     </div>
+
+                    {selectedRole === 'contractor' && (
+                      <div className="space-y-6 rounded-3xl border border-white/8 bg-[#0C1322] p-6 shadow-[0_32px_90px_rgba(3,7,18,0.7)]">
+                        <div className="space-y-3">
+                          <span className="text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-primary/70">
+                            {t('register.contractorExtra.label')}
+                          </span>
+                          <h3 className="text-lg font-semibold text-white md:text-xl">
+                            {t('register.contractorExtra.title')}
+                          </h3>
+                          <p className="text-sm text-white/70">
+                            {t('register.contractorExtra.subtitle')}
+                          </p>
+                          {contractorProfileError && (
+                            <div className="rounded-2xl border border-rose-500/45 bg-rose-500/15 px-4 py-3 text-xs text-rose-200">
+                              {contractorProfileError}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-6">
+                          <div className="space-y-3">
+                            <span className="text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+                              {t('register.contractorExtra.identity')}
+                            </span>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('form.username')}
+                                </label>
+                                <input
+                                  {...registerField('contractor_profile.username')}
+                                  autoComplete="username"
+                                  placeholder={t('register.contractorExtra.usernamePlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.username && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.username.message as string}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.personal.firstName')}
+                                </label>
+                                <input
+                                  {...registerField('contractor_profile.first_name')}
+                                  autoComplete="given-name"
+                                  placeholder={t('profile.contractor.personal.firstNamePlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.first_name && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.first_name.message as string}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.personal.lastName')}
+                                </label>
+                                <input
+                                  {...registerField('contractor_profile.last_name')}
+                                  autoComplete="family-name"
+                                  placeholder={t('profile.contractor.personal.lastNamePlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.last_name && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.last_name.message as string}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <span className="text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+                              {t('register.contractorExtra.business')}
+                            </span>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.business.name')}
+                                </label>
+                                <input
+                                  {...registerField('contractor_profile.business_name')}
+                                  autoComplete="organization"
+                                  placeholder={t('profile.contractor.business.namePlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.business_name && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.business_name.message as string}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.business.country')}
+                                </label>
+                                <input
+                                  {...registerField('contractor_profile.business_country')}
+                                  autoComplete="country-name"
+                                  placeholder={t('profile.contractor.business.countryPlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.business_country && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.business_country.message as string}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.business.province')}
+                                </label>
+                                <input
+                                  {...registerField('contractor_profile.business_province')}
+                                  autoComplete="address-level1"
+                                  placeholder={t('profile.contractor.business.provincePlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.business.years')}
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  inputMode="numeric"
+                                  {...registerField('contractor_profile.years_in_business')}
+                                  placeholder={t('profile.contractor.business.yearsPlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.years_in_business && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.years_in_business.message as string}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <span className="text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+                                {t('profile.contractor.business.cities')}
+                              </span>
+                              <div className="flex flex-wrap gap-2">
+                                {contractorCities.length === 0 ? (
+                                  <span className="rounded-full border border-dashed border-white/15 px-3 py-1 text-[0.6rem] uppercase tracking-[0.28em] text-white/40">
+                                    {t('profile.contractor.business.citiesEmpty')}
+                                  </span>
+                                ) : (
+                                  contractorCities.map((city, index) => (
+                                    <span
+                                      key={`${city}-${index.toString()}`}
+                                      className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-xs text-white"
+                                    >
+                                      {city}
+                                      <button
+                                        type="button"
+                                        onClick={() => removeCity(index)}
+                                        className="text-white/70 transition hover:text-rose-300"
+                                        aria-label={t('profile.contractor.business.removeCity', { city })}
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <input
+                                  value={cityDraft}
+                                  onChange={(event) => setCityDraft(event.target.value)}
+                                  onKeyDown={handleCityKeyDown}
+                                  placeholder={t('profile.contractor.business.cityPlaceholder')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addCity}
+                                  className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-white transition hover:border-primary/60 hover:text-primary"
+                                >
+                                  {t('register.contractorExtra.addCity')}
+                                </button>
+                              </div>
+                              <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
+                                {t('register.contractorExtra.cityHelper')}
+                              </p>
+                              {errors.contractor_profile?.business_cities && (
+                                <p className="text-xs font-medium text-rose-300">
+                                  {errors.contractor_profile.business_cities.message as string}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <span className="text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+                              {t('register.contractorExtra.optional')}
+                            </span>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.personal.birthday')}
+                                </label>
+                                <input
+                                  type="date"
+                                  max={maxBirthday}
+                                  {...registerField('contractor_profile.birthday')}
+                                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                />
+                                {errors.contractor_profile?.birthday && (
+                                  <p className="text-xs font-medium text-rose-300">
+                                    {errors.contractor_profile.birthday.message as string}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                  {t('profile.contractor.personal.gender')}
+                                </label>
+                                <div className="relative">
+                                  <select
+                                    {...registerField('contractor_profile.gender')}
+                                    className="w-full appearance-none rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                  >
+                                    {genderOptions.map((option) => (
+                                      <option key={option.value || 'empty'} value={option.value}>
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-white/40">
+                                    ▾
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button

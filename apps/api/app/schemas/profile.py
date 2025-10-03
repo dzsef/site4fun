@@ -3,7 +3,7 @@
 from datetime import date, time
 from typing import List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr, validator
 
 
 class AvailabilitySlot(BaseModel):
@@ -15,11 +15,33 @@ class AvailabilitySlot(BaseModel):
         orm_mode = True
 
 
+class BusinessLocation(BaseModel):
+    country: str
+    province: Optional[str] = None
+    cities: List[str] = Field(default_factory=list)
+
+    @validator("country")
+    def _validate_country(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("country cannot be empty")
+        return value.strip()
+
+    @validator("cities", each_item=True)
+    def _validate_cities(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("city entries cannot be blank")
+        return cleaned
+
+
 class ContractorProfileData(BaseModel):
-    name: Optional[str] = None
-    country: Optional[str] = None
-    city: Optional[str] = None
-    company_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    business_name: Optional[str] = None
+    business_location: Optional[BusinessLocation] = None
+    birthday: Optional[date] = None
+    gender: Optional[str] = None
+    years_in_business: Optional[int] = None
     image_url: Optional[str] = None
 
     class Config:
@@ -55,6 +77,8 @@ class HomeownerProfileData(BaseModel):
 class ContractorProfileEnvelope(BaseModel):
     role: Literal["contractor"]
     profile: ContractorProfileData
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
 
 
 class SubcontractorProfileEnvelope(BaseModel):

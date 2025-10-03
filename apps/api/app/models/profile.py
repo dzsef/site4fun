@@ -20,10 +20,15 @@ class ContractorProfile(Base):
     __tablename__ = "contractor_profiles"
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    name = Column(String, nullable=True)
-    country = Column(String, nullable=True)
-    city = Column(String, nullable=True)
-    company_name = Column(String, nullable=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    business_name = Column(String, nullable=True)
+    business_country = Column(String, nullable=True)
+    business_province = Column(String, nullable=True)
+    business_cities = Column(JSONB, nullable=False, server_default="[]", default=list)
+    birthday = Column(Date, nullable=True)
+    gender = Column(String, nullable=True)
+    years_in_business = Column(Integer, nullable=True)
     image_path = Column(String, nullable=True)
 
     user = relationship("User", back_populates="contractor_profile")

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 // Validation schema for login
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(3),
   password: z.string().min(6),
 });
 
@@ -46,7 +46,7 @@ const Login: React.FC = () => {
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
       const formData = new URLSearchParams();
-      formData.append('username', data.email);
+      formData.append('username', data.identifier);
       formData.append('password', data.password);
       const res = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
@@ -149,15 +149,17 @@ const Login: React.FC = () => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
-                    {t('form.email')}
+                    {t('form.emailOrUsername')}
                   </label>
                   <input
-                    {...registerField('email')}
+                    {...registerField('identifier')}
+                    autoComplete="username"
+                    placeholder={t('login.emailOrUsernamePlaceholder')}
                     className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-base text-white placeholder-white/40 shadow-[0_24px_70px_rgba(2,5,14,0.7)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
                   />
-                  {errors.email && (
+                  {errors.identifier && (
                     <p className="text-xs font-medium text-rose-300">
-                      {errors.email.message}
+                      {errors.identifier.message}
                     </p>
                   )}
                 </div>

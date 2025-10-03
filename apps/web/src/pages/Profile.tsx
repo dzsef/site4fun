@@ -45,15 +45,45 @@ type ProfileSavePayload<TProfile> = {
 const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
   if (data.role === 'contractor') {
     const profile = data.profile;
+    const rawLocation = profile.business_location ?? null;
+    let location: ContractorProfile['business_location'] = null;
+    if (rawLocation && typeof rawLocation === 'object') {
+      const country = typeof rawLocation.country === 'string' ? rawLocation.country.trim() : '';
+      const province =
+        typeof rawLocation.province === 'string' && rawLocation.province.trim().length > 0
+          ? rawLocation.province.trim()
+          : null;
+      const cities = Array.isArray(rawLocation.cities)
+        ? rawLocation.cities
+            .map((city) => (typeof city === 'string' ? city.trim() : ''))
+            .filter((city) => city.length > 0)
+        : [];
+      if (country) {
+        location = { country, province, cities };
+      }
+    }
+
+    const yearsValue =
+      typeof profile.years_in_business === 'number'
+        ? profile.years_in_business
+        : profile.years_in_business != null
+        ? Number(profile.years_in_business)
+        : null;
+
     return {
       role: 'contractor',
       profile: {
-        name: profile.name ?? null,
-        country: profile.country ?? null,
-        city: profile.city ?? null,
-        company_name: profile.company_name ?? null,
+        first_name: profile.first_name ?? null,
+        last_name: profile.last_name ?? null,
+        business_name: profile.business_name ?? null,
+        business_location: location,
+        birthday: profile.birthday ?? null,
+        gender: profile.gender ?? null,
+        years_in_business: Number.isNaN(yearsValue) ? null : yearsValue,
         image_url: resolveImageUrl(profile.image_url ?? null),
       },
+      email: data.email,
+      username: data.username,
     };
   }
   if (data.role === 'subcontractor') {
@@ -277,6 +307,7 @@ const Profile: React.FC = () => {
       return (
         <ContractorProfileForm
           data={profileData.profile}
+          identity={{ email: profileData.email, username: profileData.username }}
           onSave={handleUpdate}
           saving={saving}
         />
@@ -382,45 +413,65 @@ const Profile: React.FC = () => {
 export default Profile;
 
 type ContractorFormValues = {
-  name: string;
-  country: string;
-  city: string;
-  company_name: string;
+  first_name: string;
+  last_name: string;
+  business_name: string;
+  business_country: string;
+  business_province: string;
+  birthday: string;
+  gender: string;
+  years_in_business: string;
 };
 
 type ContractorProfileFormProps = {
   data: ContractorProfile;
+  identity?: { email?: string; username?: string };
   onSave: (payload: ProfileSavePayload<ContractorProfile>) => void | Promise<void>;
   saving: boolean;
 };
 
-const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onSave, saving }) => {
+const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, identity, onSave, saving }) => {
   const { t } = useTranslation();
   const avatarObjectUrlRef = useRef<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(data.image_url);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUpdated, setAvatarUpdated] = useState(false);
+  const [cityDraft, setCityDraft] = useState('');
+  const [citiesDirty, setCitiesDirty] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [cities, setCities] = useState<string[]>(() => data.business_location?.cities ?? []);
   const {
     register,
     handleSubmit,
     reset,
-    formState: { isDirty },
+    formState: { isDirty, errors },
   } = useForm<ContractorFormValues>({
     defaultValues: {
-      name: data.name ?? '',
-      country: data.country ?? '',
-      city: data.city ?? '',
-      company_name: data.company_name ?? '',
+      first_name: data.first_name ?? '',
+      last_name: data.last_name ?? '',
+      business_name: data.business_name ?? '',
+      business_country: data.business_location?.country ?? '',
+      business_province: data.business_location?.province ?? '',
+      birthday: data.birthday ?? '',
+      gender: data.gender ?? '',
+      years_in_business: data.years_in_business != null ? String(data.years_in_business) : '',
     },
   });
 
   useEffect(() => {
     reset({
-      name: data.name ?? '',
-      country: data.country ?? '',
-      city: data.city ?? '',
-      company_name: data.company_name ?? '',
+      first_name: data.first_name ?? '',
+      last_name: data.last_name ?? '',
+      business_name: data.business_name ?? '',
+      business_country: data.business_location?.country ?? '',
+      business_province: data.business_location?.province ?? '',
+      birthday: data.birthday ?? '',
+      gender: data.gender ?? '',
+      years_in_business: data.years_in_business != null ? String(data.years_in_business) : '',
     });
+    setCities(data.business_location?.cities ?? []);
+    setCitiesDirty(false);
+    setFormError(null);
   }, [data, reset]);
 
   useEffect(() => {
@@ -433,11 +484,14 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
     setAvatarUpdated(false);
   }, [data]);
 
-  useEffect(() => () => {
-    if (avatarObjectUrlRef.current) {
-      URL.revokeObjectURL(avatarObjectUrlRef.current);
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+      }
+    },
+    [],
+  );
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -456,15 +510,99 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
     event.target.value = '';
   };
 
+  const addCity = () => {
+    const normalized = cityDraft.trim();
+    if (!normalized) return;
+    const exists = cities.some((city) => city.toLowerCase() === normalized.toLowerCase());
+    if (exists) {
+      setCityDraft('');
+      setFormError(null);
+      return;
+    }
+    setCities((prev) => [...prev, normalized]);
+    setCitiesDirty(true);
+    setCityDraft('');
+    setFormError(null);
+  };
+
+  const removeCity = (index: number) => {
+    setCities((prev) => prev.filter((_, idx) => idx !== index));
+    setCitiesDirty(true);
+    setFormError(null);
+  };
+
+  const handleCityKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addCity();
+      return;
+    }
+    if (event.key === 'Backspace' && !cityDraft && cities.length > 0) {
+      event.preventDefault();
+      removeCity(cities.length - 1);
+    }
+  };
+
+  const shouldSubmitProfile = isDirty || citiesDirty;
+
   const submit = (values: ContractorFormValues) => {
     const payload: ProfileSavePayload<ContractorProfile> = {};
+    setFormError(null);
+    const trimmedCities = cities.map((city) => city.trim()).filter((city) => city.length > 0);
+    const seen = new Set<string>();
+    const uniqueCities: string[] = [];
+    trimmedCities.forEach((city) => {
+      const key = city.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueCities.push(city);
+      }
+    });
 
-    if (isDirty) {
+    if (shouldSubmitProfile) {
+      const requiredChecks: Array<{ value: string; message: string }> = [
+        { value: values.first_name, message: t('profile.contractor.errors.firstNameRequired') },
+        { value: values.last_name, message: t('profile.contractor.errors.lastNameRequired') },
+        { value: values.business_name, message: t('profile.contractor.errors.businessNameRequired') },
+        { value: values.business_country, message: t('profile.contractor.errors.countryRequired') },
+      ];
+      for (const check of requiredChecks) {
+        if (!check.value.trim()) {
+          setFormError(check.message);
+          return;
+        }
+      }
+      if (uniqueCities.length === 0) {
+        setFormError(t('profile.contractor.errors.cityRequired'));
+        return;
+      }
+
+      const yearsValue = values.years_in_business ? Number(values.years_in_business) : null;
+      if (yearsValue != null && (Number.isNaN(yearsValue) || yearsValue < 0)) {
+        setFormError(t('profile.contractor.errors.yearsInvalid'));
+        return;
+      }
+
+      if (values.birthday) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (values.birthday >= today) {
+          setFormError(t('profile.contractor.errors.birthdayFuture'));
+          return;
+        }
+      }
+
       payload.profile = {
-        name: values.name ? values.name : null,
-        country: values.country ? values.country : null,
-        city: values.city ? values.city : null,
-        company_name: values.company_name ? values.company_name : null,
+        first_name: values.first_name.trim(),
+        last_name: values.last_name.trim(),
+        business_name: values.business_name.trim(),
+        business_location: {
+          country: values.business_country.trim(),
+          province: values.business_province.trim() ? values.business_province.trim() : null,
+          cities: uniqueCities,
+        },
+        birthday: values.birthday || null,
+        gender: values.gender ? values.gender : null,
+        years_in_business: yearsValue,
         image_url: data.image_url ?? null,
       };
     }
@@ -480,14 +618,58 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
     onSave(payload);
   };
 
-  const canSubmit = isDirty || avatarUpdated;
+  const canSubmit = shouldSubmitProfile || avatarUpdated;
+  const genderOptions = [
+    { value: '', label: t('profile.contractor.genderOptions.undefined') },
+    { value: 'female', label: t('profile.contractor.genderOptions.female') },
+    { value: 'male', label: t('profile.contractor.genderOptions.male') },
+    { value: 'non-binary', label: t('profile.contractor.genderOptions.nonBinary') },
+    { value: 'prefer-not-to-say', label: t('profile.contractor.genderOptions.noAnswer') },
+  ];
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-10">
-      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#101726] text-[0.55rem] font-semibold uppercase tracking-[0.4em] text-white/40">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_minmax(0,1fr)] lg:items-center">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-primary/75">
+                {t('profile.contractor.identity.tagline')}
+              </span>
+              <h3 className="text-2xl font-semibold text-white md:text-3xl">
+                {t('profile.contractor.identity.title')}
+              </h3>
+              <p className="text-sm text-white/70 md:text-base">
+                {t('profile.contractor.identity.helper')}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-4">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-white/45">
+                  {t('profile.contractor.identity.email')}
+                </p>
+                <p className="truncate text-base font-semibold text-white">
+                  {identity?.email ?? t('profile.contractor.identity.missing')}
+                </p>
+                <p className="mt-2 text-[0.55rem] uppercase tracking-[0.28em] text-white/35">
+                  {t('profile.contractor.identity.locked')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-4">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-white/45">
+                  {t('profile.contractor.identity.username')}
+                </p>
+                <p className="truncate text-base font-semibold text-white">
+                  {identity?.username ?? t('profile.contractor.identity.missing')}
+                </p>
+                <p className="mt-2 text-[0.55rem] uppercase tracking-[0.28em] text-white/35">
+                  {t('profile.contractor.identity.locked')}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#101726] text-[0.55rem] font-semibold uppercase tracking-[0.4em] text-white/40 sm:h-32 sm:w-32">
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
@@ -503,53 +685,175 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, onS
                 {t('profile.avatar.pending')}
               </span>
             )}
-          </div>
-          <div className="space-y-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
-            <span>{t('profile.avatar.label')}</span>
-            <label className="inline-flex w-fit cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.55rem] tracking-[0.3em] text-white transition duration-200 hover:border-primary/60 hover:text-primary">
+            <label className="inline-flex w-fit cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white transition duration-200 hover:border-primary/60 hover:text-primary">
               {t('profile.avatar.button')}
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={handleAvatarChange}
-              />
+              <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
             </label>
-            <p className="text-[0.6rem] font-normal uppercase tracking-[0.25em] text-white/40">
+            <p className="text-[0.55rem] uppercase tracking-[0.26em] text-white/40">
               {t('profile.avatar.helper')}
             </p>
           </div>
         </div>
       </div>
-      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-8">
-        <fieldset className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <InputField
-            label={t('profile.contractor.name')}
-            placeholder={t('profile.contractor.namePlaceholder')}
-            {...register('name')}
-          />
-          <InputField
-            label={t('profile.contractor.country')}
-            placeholder={t('profile.contractor.countryPlaceholder')}
-            {...register('country')}
-          />
-          <InputField
-            label={t('profile.contractor.city')}
-            placeholder={t('profile.contractor.cityPlaceholder')}
-            {...register('city')}
-          />
-          <InputField
-            label={t('profile.contractor.company')}
-            placeholder={t('profile.contractor.companyPlaceholder')}
-            {...register('company_name')}
-          />
-        </fieldset>
+
+      {formError && (
+        <div className="rounded-3xl border border-rose-500/40 bg-rose-500/15 px-6 py-4 text-sm text-rose-100 shadow-[0_22px_60px_rgba(255,0,94,0.35)]">
+          {formError}
+        </div>
+      )}
+
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-sky-200">
+              {t('profile.contractor.personal.tagline')}
+            </span>
+            <h3 className="text-xl font-semibold text-white md:text-2xl">
+              {t('profile.contractor.personal.title')}
+            </h3>
+            <p className="text-sm text-white/70">{t('profile.contractor.personal.helper')}</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <InputField
+              label={t('profile.contractor.personal.firstName')}
+              placeholder={t('profile.contractor.personal.firstNamePlaceholder')}
+              autoComplete="given-name"
+              error={errors.first_name?.message as string | undefined}
+              {...register('first_name', { required: t('profile.contractor.errors.firstNameRequired') })}
+            />
+            <InputField
+              label={t('profile.contractor.personal.lastName')}
+              placeholder={t('profile.contractor.personal.lastNamePlaceholder')}
+              autoComplete="family-name"
+              error={errors.last_name?.message as string | undefined}
+              {...register('last_name', { required: t('profile.contractor.errors.lastNameRequired') })}
+            />
+            <InputField
+              label={t('profile.contractor.personal.birthday')}
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              {...register('birthday')}
+            />
+            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              {t('profile.contractor.personal.gender')}
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                  {...register('gender')}
+                >
+                  {genderOptions.map((option) => (
+                    <option key={option.value || 'empty'} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-white/40">
+                  ▾
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
       </div>
+
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-emerald-200">
+              {t('profile.contractor.business.tagline')}
+            </span>
+            <h3 className="text-xl font-semibold text-white md:text-2xl">
+              {t('profile.contractor.business.title')}
+            </h3>
+            <p className="text-sm text-white/70">{t('profile.contractor.business.helper')}</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <InputField
+              label={t('profile.contractor.business.name')}
+              placeholder={t('profile.contractor.business.namePlaceholder')}
+              autoComplete="organization"
+              error={errors.business_name?.message as string | undefined}
+              {...register('business_name', { required: t('profile.contractor.errors.businessNameRequired') })}
+            />
+            <InputField
+              label={t('profile.contractor.business.country')}
+              placeholder={t('profile.contractor.business.countryPlaceholder')}
+              autoComplete="country-name"
+              error={errors.business_country?.message as string | undefined}
+              {...register('business_country', { required: t('profile.contractor.errors.countryRequired') })}
+            />
+            <InputField
+              label={t('profile.contractor.business.province')}
+              placeholder={t('profile.contractor.business.provincePlaceholder')}
+              autoComplete="address-level1"
+              {...register('business_province')}
+            />
+            <InputField
+              label={t('profile.contractor.business.years')}
+              type="number"
+              min={0}
+              max={150}
+              inputMode="numeric"
+              placeholder={t('profile.contractor.business.yearsPlaceholder')}
+              {...register('years_in_business')}
+            />
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              {t('profile.contractor.business.cities')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {cities.length === 0 ? (
+                <span className="rounded-full border border-dashed border-white/15 px-3 py-1 text-[0.6rem] uppercase tracking-[0.28em] text-white/40">
+                  {t('profile.contractor.business.citiesEmpty')}
+                </span>
+              ) : (
+                cities.map((city, index) => (
+                  <span
+                    key={`${city}-${index.toString()}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-xs text-white shadow-[0_12px_30px_rgba(15,23,42,0.35)]"
+                  >
+                    {city}
+                    <button
+                      type="button"
+                      onClick={() => removeCity(index)}
+                      className="text-white/70 transition hover:text-rose-300"
+                      aria-label={t('profile.contractor.business.removeCity', { city })}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                value={cityDraft}
+                onChange={(event) => setCityDraft(event.target.value)}
+                onKeyDown={handleCityKeyDown}
+                placeholder={t('profile.contractor.business.cityPlaceholder')}
+                className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/35 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+              />
+              <button
+                type="button"
+                onClick={addCity}
+                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-white transition hover:border-primary/60 hover:text-primary"
+              >
+                {t('profile.contractor.business.addCity')}
+              </button>
+            </div>
+            <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
+              {t('profile.contractor.business.citiesHint')}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={saving || !canSubmit}
-          className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_25px_60px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_28px_80px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
@@ -1105,16 +1409,27 @@ const HomeownerProfileForm: React.FC<HomeownerProfileFormProps> = ({ data, onSav
   );
 };
 
+type InputFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  error?: string;
+};
 
 const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
-  ({ label, className = '', ...props }, ref) => (
+  ({ label, className = '', error, ...props }, ref) => (
     <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
       {label}
       <input
         ref={ref}
-        className={`w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/35 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition ${className}`}
+        className={`w-full rounded-2xl border ${
+          error ? 'border-rose-400/80 focus:border-rose-400 focus:ring-rose-200/60' : 'border-white/10 focus:border-primary focus:ring-primary/60'
+        } bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/35 focus:outline-none transition ${className}`}
         {...props}
       />
+      {error && (
+        <span className="text-[0.6rem] font-medium uppercase tracking-[0.24em] text-rose-300">
+          {error}
+        </span>
+      )}
     </label>
   ),
 );

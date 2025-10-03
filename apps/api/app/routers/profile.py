@@ -1,5 +1,6 @@
 """Profile management routes for authenticated users."""
 
+from datetime import date as date_type
 from decimal import Decimal
 from typing import List, Sequence, Union
 
@@ -18,6 +19,7 @@ from ..models.profile import (
 from ..models.user import User
 from ..schemas.profile import (
     AvailabilitySlot,
+    BusinessLocation,
     ContractorProfileData,
     ContractorProfileEnvelope,
     HomeownerProfileData,
@@ -38,14 +40,32 @@ async def _contractor_response(user: User, db: AsyncSession) -> ContractorProfil
     if profile is None:
         data = ContractorProfileData()
     else:
+        location = None
+        if profile.business_country:
+            try:
+                location = BusinessLocation(
+                    country=profile.business_country,
+                    province=profile.business_province,
+                    cities=list(profile.business_cities or []),
+                )
+            except ValueError:
+                location = None
         data = ContractorProfileData(
-            name=profile.name,
-            country=profile.country,
-            city=profile.city,
-            company_name=profile.company_name,
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+            business_name=profile.business_name,
+            business_location=location,
+            birthday=profile.birthday,
+            gender=profile.gender,
+            years_in_business=profile.years_in_business,
             image_url=image_path_to_url(profile.image_path),
         )
-    return ContractorProfileEnvelope(role="contractor", profile=data)
+    return ContractorProfileEnvelope(
+        role="contractor",
+        profile=data,
+        email=user.email,
+        username=user.username,
+    )
 
 
 async def _subcontractor_response(user: User, db: AsyncSession) -> SubcontractorProfileEnvelope:
@@ -129,10 +149,52 @@ async def update_profile(
         if profile is None:
             profile = ContractorProfile(user_id=current_user.id)
             db.add(profile)
-        profile.name = payload.profile.name
-        profile.country = payload.profile.country
-        profile.city = payload.profile.city
-        profile.company_name = payload.profile.company_name
+        data = payload.profile
+        if data.business_location is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business location is required",
+            )
+
+        location = data.business_location
+        normalized_cities = []
+        seen_cities = set()
+        for city in location.cities:
+            trimmed = city.strip()
+            if not trimmed:
+                continue
+            key = trimmed.lower()
+            if key in seen_cities:
+                continue
+            seen_cities.add(key)
+            normalized_cities.append(trimmed)
+        if not normalized_cities:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please provide at least one business city",
+            )
+
+        if data.years_in_business is not None and data.years_in_business < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Years in business cannot be negative",
+            )
+
+        if data.birthday and data.birthday >= date_type.today():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Birthday must be in the past",
+            )
+
+        profile.first_name = data.first_name.strip() if data.first_name else None
+        profile.last_name = data.last_name.strip() if data.last_name else None
+        profile.business_name = data.business_name.strip() if data.business_name else None
+        profile.business_country = location.country.strip()
+        profile.business_province = location.province.strip() if location.province else None
+        profile.business_cities = normalized_cities
+        profile.birthday = data.birthday
+        profile.gender = data.gender.strip() if data.gender else None
+        profile.years_in_business = data.years_in_business
         # Preserve existing image_path for contractor profiles; updates happen via the avatar endpoint.
         await db.commit()
         await db.refresh(profile)

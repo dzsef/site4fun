@@ -45,14 +45,61 @@
       "pending": "Awaiting save"
     },
     "contractor": {
-      "name": "Full name",
-      "namePlaceholder": "e.g. Alex Smith",
-      "country": "Country",
-      "countryPlaceholder": "e.g. Hungary",
-      "city": "City",
-      "cityPlaceholder": "e.g. Budapest",
-      "company": "Company name",
-      "companyPlaceholder": "e.g. BuildRight Ltd."
+      "identity": {
+        "tagline": "Account foundation",
+        "title": "Immutable credentials",
+        "helper": "Email and username follow you forever. Reach out to support if something looks incorrect.",
+        "email": "Sign-up email",
+        "username": "Username",
+        "missing": "Unavailable",
+        "locked": "Locked after sign-up"
+      },
+      "personal": {
+        "tagline": "Personal signature",
+        "title": "Introduce yourself",
+        "helper": "Share who clients will be collaborating with day-to-day.",
+        "firstName": "First name",
+        "firstNamePlaceholder": "e.g. Alex",
+        "lastName": "Family name",
+        "lastNamePlaceholder": "e.g. Kovács",
+        "birthday": "Birthday",
+        "gender": "Gender identity"
+      },
+      "business": {
+        "tagline": "Business presence",
+        "title": "Where you operate",
+        "helper": "Point homeowners to the regions you serve and how long you've been in the game.",
+        "name": "Business name",
+        "namePlaceholder": "e.g. BuildRight Ltd.",
+        "country": "Country",
+        "countryPlaceholder": "e.g. Hungary",
+        "province": "Province / State",
+        "provincePlaceholder": "e.g. Pest County",
+        "years": "Years in business",
+        "yearsPlaceholder": "e.g. 12",
+        "cities": "City coverage",
+        "citiesEmpty": "No cities added yet",
+        "cityPlaceholder": "Type a city and press Enter",
+        "addCity": "Add city",
+        "removeCity": "Remove {{city}}",
+        "citiesHint": "Add every city where you actively take on work. Use Enter to confirm each one."
+      },
+      "genderOptions": {
+        "undefined": "Prefer not to say",
+        "female": "Female",
+        "male": "Male",
+        "nonBinary": "Non-binary",
+        "noAnswer": "Prefer another term"
+      },
+      "errors": {
+        "firstNameRequired": "First name is required.",
+        "lastNameRequired": "Family name is required.",
+        "businessNameRequired": "Business name is required.",
+        "countryRequired": "Country is required.",
+        "cityRequired": "Add at least one city.",
+        "yearsInvalid": "Years in business must be a non-negative number.",
+        "birthdayFuture": "Birthday must be a past date."
+      }
     },
     "subcontractor": {
       "name": "Display name",
@@ -270,6 +317,8 @@
   "form": {
     "name": "Name",
     "email": "Email",
+    "username": "Username",
+    "emailOrUsername": "Email or username",
     "phone": "Phone (optional)",
     "message": "Message",
     "submit": "Submit Request",
@@ -283,6 +332,7 @@
   },
   "login": {
     "title": "Login",
+    "emailOrUsernamePlaceholder": "hello@studio.com or buildright",
     "submit": "Sign In",
     "noAccount": "Don't have an account?",
     "registerLink": "Register here",
@@ -340,6 +390,17 @@
       "subcontractor": {
         "caption": "Broadcast your craft with availability telemetry in a single share."
       }
+    },
+    "contractorExtra": {
+      "label": "Contractor onboarding",
+      "title": "Unlock your contractor workspace",
+      "subtitle": "Share a handful of essentials so we can tailor invites, compliance, and matching from day one.",
+      "identity": "Identity",
+      "business": "Business footprint",
+      "optional": "Optional insights",
+      "usernamePlaceholder": "Pick a public handle",
+      "addCity": "Add city",
+      "cityHelper": "Add each city you serve and press Enter to confirm."
     },
     "successTitle": "Confirm your email",
     "successHint": "We've sent a confirmation email. Click the link inside to activate your account.",
