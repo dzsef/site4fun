@@ -53,7 +53,7 @@ def _compose_confirmation_email(recipient_email: str, confirmation_link: str) ->
     subject = "Confirm your Site4Fun registration"
     body = (
         "Hi there!\n\n"
-        "Thanks for signing up for Site4Fun. To activate your account, please click the link below:\n\n"
+        "Thanks for signing up for Osus. To activate your account, please click the link below:\n\n"
         f"{confirmation_link}\n\n"
         "This link will stay valid for "
         f"{CONFIRMATION_TOKEN_TTL_HOURS} hours.\n\n"
