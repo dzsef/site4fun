@@ -30,6 +30,7 @@ from ..schemas.profile import (
     SubcontractorProfileEnvelope,
     SubcontractorDirectoryCard,
 )
+from ..schemas.user import SUPPORTED_COUNTRIES
 from ..utils.media import image_path_to_url, save_profile_image
 
 router = APIRouter()
@@ -45,7 +46,7 @@ async def _contractor_response(user: User, db: AsyncSession) -> ContractorProfil
             try:
                 location = BusinessLocation(
                     country=profile.business_country,
-                    province=profile.business_province,
+                    provinces=list(profile.business_provinces or []),
                     cities=list(profile.business_cities or []),
                 )
             except ValueError:
@@ -157,6 +158,30 @@ async def update_profile(
             )
 
         location = data.business_location
+        normalized_provinces = []
+        seen_provinces = set()
+        for province in location.provinces:
+            trimmed = province.strip().upper()
+            if not trimmed:
+                continue
+            key = trimmed.lower()
+            if key in seen_provinces:
+                continue
+            seen_provinces.add(key)
+            normalized_provinces.append(trimmed)
+        if not normalized_provinces:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please provide at least one province or territory",
+            )
+
+        allowed = SUPPORTED_COUNTRIES.get(profile.business_country.upper(), set()) if profile.business_country else set()
+        if allowed and any(code not in allowed for code in normalized_provinces):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Province or territory is not available for the selected country",
+            )
+
         normalized_cities = []
         seen_cities = set()
         for city in location.cities:
@@ -189,8 +214,8 @@ async def update_profile(
         profile.first_name = data.first_name.strip() if data.first_name else None
         profile.last_name = data.last_name.strip() if data.last_name else None
         profile.business_name = data.business_name.strip() if data.business_name else None
-        profile.business_country = location.country.strip()
-        profile.business_province = location.province.strip() if location.province else None
+        profile.business_country = location.country
+        profile.business_provinces = normalized_provinces
         profile.business_cities = normalized_cities
         profile.birthday = data.birthday
         profile.gender = data.gender.strip() if data.gender else None

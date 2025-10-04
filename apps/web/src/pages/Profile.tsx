@@ -11,6 +11,7 @@ import type {
   SubcontractorProfile,
 } from '../types/profile';
 import { readProfileCache, writeProfileCache, clearProfileCache } from '../utils/profileCache';
+import { COUNTRY_OPTIONS, PROVINCES_BY_COUNTRY } from '../data/geo';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -48,18 +49,19 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
     const rawLocation = profile.business_location ?? null;
     let location: ContractorProfile['business_location'] = null;
     if (rawLocation && typeof rawLocation === 'object') {
-      const country = typeof rawLocation.country === 'string' ? rawLocation.country.trim() : '';
-      const province =
-        typeof rawLocation.province === 'string' && rawLocation.province.trim().length > 0
-          ? rawLocation.province.trim()
-          : null;
+      const country = typeof rawLocation.country === 'string' ? rawLocation.country.trim().toUpperCase() : '';
+      const provinces = Array.isArray(rawLocation.provinces)
+        ? rawLocation.provinces
+            .map((province: unknown) => (typeof province === 'string' ? province.trim().toUpperCase() : ''))
+            .filter((province: string) => province.length > 0)
+        : [];
       const cities = Array.isArray(rawLocation.cities)
         ? rawLocation.cities
-            .map((city) => (typeof city === 'string' ? city.trim() : ''))
-            .filter((city) => city.length > 0)
+            .map((city: unknown) => (typeof city === 'string' ? city.trim() : ''))
+            .filter((city: string) => city.length > 0)
         : [];
       if (country) {
-        location = { country, province, cities };
+        location = { country, provinces, cities };
       }
     }
 
@@ -417,7 +419,6 @@ type ContractorFormValues = {
   last_name: string;
   business_name: string;
   business_country: string;
-  business_province: string;
   birthday: string;
   gender: string;
   years_in_business: string;
@@ -440,18 +441,21 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
   const [citiesDirty, setCitiesDirty] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [cities, setCities] = useState<string[]>(() => data.business_location?.cities ?? []);
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>(
+    () => data.business_location?.provinces ?? [],
+  );
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { isDirty, errors },
   } = useForm<ContractorFormValues>({
     defaultValues: {
       first_name: data.first_name ?? '',
       last_name: data.last_name ?? '',
       business_name: data.business_name ?? '',
-      business_country: data.business_location?.country ?? '',
-      business_province: data.business_location?.province ?? '',
+      business_country: data.business_location?.country ?? COUNTRY_OPTIONS[0].code,
       birthday: data.birthday ?? '',
       gender: data.gender ?? '',
       years_in_business: data.years_in_business != null ? String(data.years_in_business) : '',
@@ -463,14 +467,14 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
       first_name: data.first_name ?? '',
       last_name: data.last_name ?? '',
       business_name: data.business_name ?? '',
-      business_country: data.business_location?.country ?? '',
-      business_province: data.business_location?.province ?? '',
+      business_country: data.business_location?.country ?? COUNTRY_OPTIONS[0].code,
       birthday: data.birthday ?? '',
       gender: data.gender ?? '',
       years_in_business: data.years_in_business != null ? String(data.years_in_business) : '',
     });
     setCities(data.business_location?.cities ?? []);
     setCitiesDirty(false);
+    setSelectedProvinces(data.business_location?.provinces ?? []);
     setFormError(null);
   }, [data, reset]);
 
@@ -492,6 +496,34 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
     },
     [],
   );
+
+  const watchCountry = watch('business_country');
+  const selectedCountry = useMemo(() => (watchCountry || COUNTRY_OPTIONS[0].code).toUpperCase(), [watchCountry]);
+  const provinceOptions = useMemo(
+    () => PROVINCES_BY_COUNTRY[selectedCountry] ?? [],
+    [selectedCountry],
+  );
+
+  useEffect(() => {
+    setSelectedProvinces((prev) => {
+      const allowed = new Set(provinceOptions.map((option) => option.code));
+      const filtered = prev.filter((code) => allowed.has(code));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [provinceOptions]);
+
+  const originalProvinces = useMemo(
+    () => (data.business_location?.provinces ?? []).slice().sort(),
+    [data.business_location?.provinces],
+  );
+
+  const provincesDirty = useMemo(() => {
+    const currentSorted = [...selectedProvinces].sort();
+    if (originalProvinces.length !== currentSorted.length) {
+      return true;
+    }
+    return originalProvinces.some((code, index) => code !== currentSorted[index]);
+  }, [originalProvinces, selectedProvinces]);
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -543,11 +575,29 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
     }
   };
 
-  const shouldSubmitProfile = isDirty || citiesDirty;
+  const toggleProvince = (code: string) => {
+    const normalizedCode = code.toUpperCase();
+    const allowed = new Set(provinceOptions.map((option) => option.code));
+    if (!allowed.has(normalizedCode)) {
+      return;
+    }
+    setSelectedProvinces((prev) => {
+      if (prev.includes(normalizedCode)) {
+        const next = prev.filter((item) => item !== normalizedCode);
+        setFormError(null);
+        return next;
+      }
+      setFormError(null);
+      return [...prev, normalizedCode];
+    });
+  };
+
+  const shouldSubmitProfile = isDirty || citiesDirty || provincesDirty;
 
   const submit = (values: ContractorFormValues) => {
     const payload: ProfileSavePayload<ContractorProfile> = {};
     setFormError(null);
+    const country = (values.business_country || COUNTRY_OPTIONS[0].code).trim().toUpperCase();
     const trimmedCities = cities.map((city) => city.trim()).filter((city) => city.length > 0);
     const seen = new Set<string>();
     const uniqueCities: string[] = [];
@@ -564,13 +614,22 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
         { value: values.first_name, message: t('profile.contractor.errors.firstNameRequired') },
         { value: values.last_name, message: t('profile.contractor.errors.lastNameRequired') },
         { value: values.business_name, message: t('profile.contractor.errors.businessNameRequired') },
-        { value: values.business_country, message: t('profile.contractor.errors.countryRequired') },
+        { value: country, message: t('profile.contractor.errors.countryRequired') },
       ];
       for (const check of requiredChecks) {
         if (!check.value.trim()) {
           setFormError(check.message);
           return;
         }
+      }
+      if (selectedProvinces.length === 0) {
+        setFormError(t('profile.contractor.errors.provinceRequired'));
+        return;
+      }
+      const allowedProvinceCodes = new Set(provinceOptions.map((option) => option.code));
+      if (selectedProvinces.some((code) => !allowedProvinceCodes.has(code))) {
+        setFormError(t('profile.contractor.errors.provinceInvalid'));
+        return;
       }
       if (uniqueCities.length === 0) {
         setFormError(t('profile.contractor.errors.cityRequired'));
@@ -596,8 +655,8 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
         last_name: values.last_name.trim(),
         business_name: values.business_name.trim(),
         business_location: {
-          country: values.business_country.trim(),
-          province: values.business_province.trim() ? values.business_province.trim() : null,
+          country,
+          provinces: selectedProvinces,
           cities: uniqueCities,
         },
         birthday: values.birthday || null,
@@ -775,19 +834,57 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
               error={errors.business_name?.message as string | undefined}
               {...register('business_name', { required: t('profile.contractor.errors.businessNameRequired') })}
             />
-            <InputField
-              label={t('profile.contractor.business.country')}
-              placeholder={t('profile.contractor.business.countryPlaceholder')}
-              autoComplete="country-name"
-              error={errors.business_country?.message as string | undefined}
-              {...register('business_country', { required: t('profile.contractor.errors.countryRequired') })}
-            />
-            <InputField
-              label={t('profile.contractor.business.province')}
-              placeholder={t('profile.contractor.business.provincePlaceholder')}
-              autoComplete="address-level1"
-              {...register('business_province')}
-            />
+            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              {t('profile.contractor.business.country')}
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                  {...register('business_country', { required: t('profile.contractor.errors.countryRequired') })}
+                >
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-white/40">
+                  ▾
+                </span>
+              </div>
+            </label>
+            <div className="md:col-span-2 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+                {t('profile.contractor.business.provinces')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {provinceOptions.length === 0 ? (
+                  <span className="rounded-full border border-dashed border-white/15 px-3 py-1 text-[0.6rem] uppercase tracking-[0.28em] text-white/40">
+                    {t('profile.contractor.business.noProvinces')}
+                  </span>
+                ) : (
+                  provinceOptions.map((option) => {
+                    const active = selectedProvinces.includes(option.code);
+                    return (
+                      <button
+                        key={option.code}
+                        type="button"
+                        onClick={() => toggleProvince(option.code)}
+                        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] transition ${
+                          active
+                            ? 'border-primary bg-primary text-dark-900 shadow-[0_12px_30px_rgba(245,184,0,0.45)]'
+                            : 'border-white/15 bg-white/10 text-white hover:border-primary/60 hover:text-primary'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
+                {t('profile.contractor.business.provincesHint')}
+              </p>
+            </div>
             <InputField
               label={t('profile.contractor.business.years')}
               type="number"

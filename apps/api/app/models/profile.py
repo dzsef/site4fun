@@ -24,7 +24,7 @@ class ContractorProfile(Base):
     last_name = Column(String, nullable=True)
     business_name = Column(String, nullable=True)
     business_country = Column(String, nullable=True)
-    business_province = Column(String, nullable=True)
+    business_provinces = Column(JSONB, nullable=False, server_default="[]", default=list)
     business_cities = Column(JSONB, nullable=False, server_default="[]", default=list)
     birthday = Column(Date, nullable=True)
     gender = Column(String, nullable=True)

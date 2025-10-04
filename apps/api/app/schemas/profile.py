@@ -5,6 +5,8 @@ from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, EmailStr, validator
 
+from .user import SUPPORTED_COUNTRIES
+
 
 class AvailabilitySlot(BaseModel):
     date: date
@@ -17,14 +19,44 @@ class AvailabilitySlot(BaseModel):
 
 class BusinessLocation(BaseModel):
     country: str
-    province: Optional[str] = None
+    provinces: List[str] = Field(default_factory=list)
     cities: List[str] = Field(default_factory=list)
 
     @validator("country")
     def _validate_country(cls, value: str) -> str:
-        if not value or not value.strip():
+        cleaned = value.strip().upper()
+        if not cleaned:
             raise ValueError("country cannot be empty")
-        return value.strip()
+        if cleaned not in SUPPORTED_COUNTRIES:
+            raise ValueError("Unsupported country")
+        return cleaned
+
+    @validator("provinces", pre=True, always=True)
+    def _normalize_provinces(cls, value, values):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            raise ValueError("Invalid provinces list")
+
+        country = values.get("country")
+        allowed = SUPPORTED_COUNTRIES.get(country, set()) if country else set()
+        normalized: List[str] = []
+        seen = set()
+        for item in value:
+            if not isinstance(item, str):
+                raise ValueError("Province must be a string")
+            cleaned = item.strip().upper()
+            if not cleaned:
+                continue
+            if country and allowed and cleaned not in allowed:
+                raise ValueError("Province/territory not available for the selected country")
+            if cleaned in seen:
+                continue
+            seen.add(cleaned)
+            normalized.append(cleaned)
+        return normalized
 
     @validator("cities", each_item=True)
     def _validate_cities(cls, value: str) -> str:

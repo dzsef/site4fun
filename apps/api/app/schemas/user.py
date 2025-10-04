@@ -9,6 +9,26 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, constr, root_validator, validator
 
+CANADA_CODE = "CA"
+
+CANADA_PROVINCE_CODES = [
+    "AB",  # Alberta
+    "BC",  # British Columbia
+    "MB",  # Manitoba
+    "NB",  # New Brunswick
+    "NL",  # Newfoundland and Labrador
+    "NS",  # Nova Scotia
+    "ON",  # Ontario
+    "PE",  # Prince Edward Island
+    "QC",  # Quebec
+    "SK",  # Saskatchewan
+    "NT",  # Northwest Territories
+    "NU",  # Nunavut
+    "YT",  # Yukon
+]
+
+SUPPORTED_COUNTRIES = {CANADA_CODE: set(CANADA_PROVINCE_CODES)}
+
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -17,15 +37,42 @@ class UserBase(BaseModel):
 
 class ContractorLocation(BaseModel):
     country: constr(min_length=1)
-    province: Optional[str] = None
+    provinces: List[str] = Field(default_factory=list)
     cities: List[str] = Field(default_factory=list)
 
-    @validator("province", pre=True, always=True)
-    def _normalize_province(cls, value: Optional[str]) -> Optional[str]:
+    @validator("country")
+    def _validate_country(cls, value: str) -> str:
+        cleaned = value.strip().upper()
+        if cleaned not in SUPPORTED_COUNTRIES:
+            raise ValueError("Unsupported country")
+        return cleaned
+
+    @validator("provinces", pre=True, always=True)
+    def _normalize_provinces(cls, value, values):
         if value is None:
-            return None
-        stripped = value.strip()
-        return stripped or None
+            return []
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            raise ValueError("Invalid provinces list")
+
+        country = values.get("country")
+        allowed = SUPPORTED_COUNTRIES.get(country, set()) if country else set()
+        normalized: List[str] = []
+        seen = set()
+        for item in value:
+            if not isinstance(item, str):
+                raise ValueError("Province must be a string")
+            cleaned = item.strip().upper()
+            if not cleaned:
+                continue
+            if country and allowed and cleaned not in allowed:
+                raise ValueError("Province/territory not available for the selected country")
+            if cleaned in seen:
+                continue
+            seen.add(cleaned)
+            normalized.append(cleaned)
+        return normalized
 
     @validator("cities", pre=True)
     def _normalize_cities(cls, value):
@@ -83,6 +130,8 @@ class UserCreate(UserBase):
         if role == "contractor":
             if contractor_profile is None:
                 raise ValueError("contractor_profile is required for contractor registrations")
+            if not contractor_profile.business_location.provinces:
+                raise ValueError("At least one province or territory must be provided")
         else:
             values["contractor_profile"] = None
         return values

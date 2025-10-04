@@ -6,7 +6,7 @@ export type AvailabilitySlot = {
 
 export type BusinessLocation = {
   country: string;
-  province: string | null;
+  provinces: string[];
   cities: string[];
 };
 

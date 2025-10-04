@@ -30,11 +30,13 @@ from ..models.profile import (
 from ..schemas.user import (
     ConfirmEmailRequest,
     RegistrationResponse,
+    SUPPORTED_COUNTRIES,
     UserCreate,
     UserOut,
 )
 from ..utils.security import hash_password, verify_password, create_access_token
 from ..utils.email import send_email, EmailDeliveryError
+from ..schemas.user import SUPPORTED_COUNTRIES
 
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -52,16 +54,16 @@ def _build_confirmation_link(token: str) -> str:
 
 
 def _compose_confirmation_email(recipient_email: str, confirmation_link: str) -> Tuple[str, str]:
-    subject = "Confirm your Site4Fun registration"
+    subject = "Confirm your OSUS registration"
     body = (
         "Hi there!\n\n"
-        "Thanks for signing up for Site4Fun. To activate your account, please click the link below:\n\n"
+        "Thanks for signing up for OSUS. To activate your account, please click the link below:\n\n"
         f"{confirmation_link}\n\n"
         "This link will stay valid for "
         f"{CONFIRMATION_TOKEN_TTL_HOURS} hours.\n\n"
         "If you didn't start this registration, you can safely ignore this message.\n\n"
         "Cheers,\n"
-        "The Site4Fun Team"
+        "The OSUS Team"
     )
     return subject, body
 
@@ -229,7 +231,7 @@ async def confirm_registration(
         last_name = payload.get("last_name")
         business_name = payload.get("business_name")
         raw_country = location.get("country")
-        raw_province = location.get("province")
+        raw_provinces = location.get("provinces") or []
         raw_cities = location.get("cities") or []
         normalized_cities = []
         if isinstance(raw_cities, list):
@@ -246,14 +248,39 @@ async def confirm_registration(
                 seen_city_keys.add(key)
                 normalized_cities.append(trimmed)
 
+        country_value = None
+        if isinstance(raw_country, str):
+            cleaned_country = raw_country.strip().upper()
+            if cleaned_country:
+                country_value = cleaned_country
+
+        normalized_provinces = []
+        if isinstance(raw_provinces, list):
+            seen_province_keys = set()
+            for entry in raw_provinces:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip().upper()
+                if not trimmed:
+                    continue
+                if trimmed in seen_province_keys:
+                    continue
+                seen_province_keys.add(trimmed)
+                normalized_provinces.append(trimmed)
+
+        if country_value:
+            allowed_provinces = SUPPORTED_COUNTRIES.get(country_value, set())
+            if allowed_provinces:
+                normalized_provinces = [code for code in normalized_provinces if code in allowed_provinces]
+
         db.add(
             ContractorProfile(
                 user_id=new_user.id,
                 first_name=first_name.strip() if isinstance(first_name, str) and first_name.strip() else None,
                 last_name=last_name.strip() if isinstance(last_name, str) and last_name.strip() else None,
                 business_name=business_name.strip() if isinstance(business_name, str) and business_name.strip() else None,
-                business_country=raw_country.strip() if isinstance(raw_country, str) and raw_country.strip() else None,
-                business_province=raw_province.strip() if isinstance(raw_province, str) and raw_province.strip() else None,
+                business_country=country_value,
+                business_provinces=normalized_provinces,
                 business_cities=normalized_cities,
                 birthday=birthday,
                 gender=(payload.get("gender") or None),

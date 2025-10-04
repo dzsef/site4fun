@@ -131,7 +131,7 @@ const Home: React.FC = () => {
         <div className="absolute bottom-[-22%] left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-sky-500/12 blur-[230px]" />
       </div>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-24 px-4 pb-32 pt-28 md:pt-32 lg:pt-36">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-24 px-4 pb-32 pt-28 md:pt-32 lg:max-w-7xl lg:px-4 lg:pt-36 xl:max-w-[96rem] xl:px-6 2xl:max-w-[105rem] 2xl:px-8">
         <section className="flex flex-col gap-10 text-center lg:text-left">
           <div className="flex flex-col items-center gap-6 lg:flex-row lg:justify-between">
             <div className="max-w-3xl space-y-6">
@@ -183,7 +183,7 @@ const Home: React.FC = () => {
               {t('home.personaSection.subtitle')}
             </p>
           </header>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8 xl:gap-10 2xl:gap-12">
             {personaMeta.map(({ key, accent, aura, icon }) => (
               <Link
                 key={key}
