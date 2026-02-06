@@ -35,6 +35,11 @@ const specialistProfileSchema = z.object({
   languages: z.array(z.string().min(1)).optional(),
 });
 
+const subcontractorProfileSchema = z.object({
+  first_name: z.string().min(1),
+  last_name: z.string().min(1),
+});
+
 const baseRegisterSchema = z
   .object({
     email: z.string().email(),
@@ -42,6 +47,7 @@ const baseRegisterSchema = z
     role: z.enum(['contractor', 'specialist', 'subcontractor']),
     contractor_profile: contractorProfileSchema.optional(),
     specialist_profile: specialistProfileSchema.optional(),
+    subcontractor_profile: subcontractorProfileSchema.optional(),
   })
   .superRefine((data, ctx) => {
     if (data.role === 'contractor') {
@@ -190,6 +196,14 @@ const baseRegisterSchema = z
           }
         }
       }
+    } else if (data.role === 'subcontractor') {
+      if (!data.subcontractor_profile) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Provide your subcontractor details.',
+          path: ['subcontractor_profile'],
+        });
+      }
     }
   });
 
@@ -200,8 +214,10 @@ const registerSchema = z.preprocess((input) => {
 
   if (role === 'contractor') {
     delete data.specialist_profile;
+    delete data.subcontractor_profile;
   } else if (role === 'specialist') {
     delete data.contractor_profile;
+    delete data.subcontractor_profile;
   } else if (role === 'subcontractor') {
     delete data.contractor_profile;
     delete data.specialist_profile;
@@ -214,6 +230,7 @@ type RegisterData = z.infer<typeof baseRegisterSchema>;
 
 type ContractorRegistrationProfile = z.infer<typeof contractorProfileSchema>;
 type SpecialistRegistrationProfile = z.infer<typeof specialistProfileSchema>;
+type SubcontractorRegistrationProfile = z.infer<typeof subcontractorProfileSchema>;
 
 const createEmptyContractorProfile = (): ContractorRegistrationProfile => ({
   username: '',
@@ -240,6 +257,11 @@ const createEmptySpecialistProfile = (): SpecialistRegistrationProfile => ({
   years_of_experience: '',
   bio: '',
   languages: [],
+});
+
+const createEmptySubcontractorProfile = (): SubcontractorRegistrationProfile => ({
+  first_name: '',
+  last_name: '',
 });
 
 type RoleOption = {
@@ -305,6 +327,7 @@ const Register: React.FC = () => {
       role: 'contractor',
       contractor_profile: createEmptyContractorProfile(),
       specialist_profile: undefined,
+      subcontractor_profile: undefined,
     },
   });
   const { errors, isSubmitting } = formState;
@@ -654,6 +677,12 @@ const Register: React.FC = () => {
           bio: profile.bio?.trim() ? profile.bio.trim() : undefined,
           languages: uniqueLanguages,
         };
+      } else if (data.role === 'subcontractor' && data.subcontractor_profile) {
+        const profile = data.subcontractor_profile;
+        payload.subcontractor_profile = {
+          first_name: profile.first_name.trim(),
+          last_name: profile.last_name.trim(),
+        };
       }
 
       const res = await fetch(`${baseUrl}/auth/register`, {
@@ -694,6 +723,7 @@ const Register: React.FC = () => {
 
     const setContractor = role === 'contractor';
     const setSpecialist = role === 'specialist';
+    const setSubcontractor = role === 'subcontractor';
 
     setValue('contractor_profile', setContractor ? createEmptyContractorProfile() : undefined, {
       shouldDirty: false,
@@ -716,6 +746,13 @@ const Register: React.FC = () => {
       'specialist_profile.business_cities',
       'specialist_profile.languages',
     ]);
+
+    setValue('subcontractor_profile', setSubcontractor ? createEmptySubcontractorProfile() : undefined, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+    clearErrors(['subcontractor_profile']);
   };
 
   const progressPercent = (step / totalSteps) * 100;
@@ -1062,6 +1099,50 @@ const Register: React.FC = () => {
                           {selectedRole === 'specialist' && specialistProfileError && (
                             <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
                               {specialistProfileError}
+                            </div>
+                          )}
+
+                          {selectedRole === 'subcontractor' && (
+                            <div className="space-y-5 rounded-3xl border border-white/10 bg-[#0B121F] px-5 py-6 shadow-[0_26px_80px_rgba(3,7,18,0.6)]">
+                              <div className="space-y-3">
+                                <span className="text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+                                  {t('register.contractorExtra.identity')}
+                                </span>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                      {t('profile.contractor.personal.firstName')}
+                                    </label>
+                                    <input
+                                      {...registerField('subcontractor_profile.first_name')}
+                                      autoComplete="given-name"
+                                      placeholder={t('profile.contractor.personal.firstNamePlaceholder')}
+                                      className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                    />
+                                    {errors.subcontractor_profile?.first_name && (
+                                      <p className="text-xs font-medium text-rose-300">
+                                        {errors.subcontractor_profile.first_name.message as string}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                                      {t('profile.contractor.personal.lastName')}
+                                    </label>
+                                    <input
+                                      {...registerField('subcontractor_profile.last_name')}
+                                      autoComplete="family-name"
+                                      placeholder={t('profile.contractor.personal.lastNamePlaceholder')}
+                                      className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/45 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                                    />
+                                    {errors.subcontractor_profile?.last_name && (
+                                      <p className="text-xs font-medium text-rose-300">
+                                        {errors.subcontractor_profile.last_name.message as string}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
 

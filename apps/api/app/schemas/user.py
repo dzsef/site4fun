@@ -176,31 +176,53 @@ class SpecialistRegistrationProfile(BaseModel):
         return value
 
 
+class SubcontractorRegistrationProfile(BaseModel):
+    first_name: constr(min_length=1, max_length=120)
+    last_name: constr(min_length=1, max_length=120)
+
+    @validator("first_name", "last_name")
+    def _strip_text_fields(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Value cannot be blank")
+        return stripped
+
+
 class UserCreate(UserBase):
     password: constr(min_length=6)
     contractor_profile: Optional[ContractorRegistrationProfile] = None
     specialist_profile: Optional[SpecialistRegistrationProfile] = None
+    subcontractor_profile: Optional[SubcontractorRegistrationProfile] = None
 
     @root_validator
     def _validate_role_requirements(cls, values):
         role = values.get("role")
         contractor_profile = values.get("contractor_profile")
         specialist_profile = values.get("specialist_profile")
+        subcontractor_profile = values.get("subcontractor_profile")
         if role == "contractor":
             if contractor_profile is None:
                 raise ValueError("contractor_profile is required for contractor registrations")
             if not contractor_profile.business_location.provinces:
                 raise ValueError("At least one province or territory must be provided")
             values["specialist_profile"] = None
+            values["subcontractor_profile"] = None
         elif role == "specialist":
             if specialist_profile is None:
                 raise ValueError("specialist_profile is required for specialist registrations")
             if not specialist_profile.business_location.provinces:
                 raise ValueError("At least one province or territory must be provided")
             values["contractor_profile"] = None
+            values["subcontractor_profile"] = None
+        elif role == "subcontractor":
+            if subcontractor_profile is None:
+                raise ValueError("subcontractor_profile is required for subcontractor registrations")
+            values["contractor_profile"] = None
+            values["specialist_profile"] = None
         else:
             values["contractor_profile"] = None
             values["specialist_profile"] = None
+            values["subcontractor_profile"] = None
         return values
 
 

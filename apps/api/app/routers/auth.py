@@ -266,7 +266,9 @@ def _create_default_profile(db: AsyncSession, user: User, payload: dict) -> None
         return
 
     if user.role == "subcontractor":
-        db.add(SubcontractorProfile(user_id=user.id, skills=[], services=[]))
+        name_value = payload.get("name")
+        name = name_value.strip() if isinstance(name_value, str) and name_value.strip() else None
+        db.add(SubcontractorProfile(user_id=user.id, name=name, skills=[], services=[]))
         return
 
     if user.role == "homeowner":
@@ -362,6 +364,18 @@ async def register(
                 "years_of_experience": user_data.specialist_profile.years_of_experience,
                 "bio": user_data.specialist_profile.bio,
                 "languages": user_data.specialist_profile.languages,
+            }
+        )
+
+    elif user_data.role == "subcontractor":
+        if getattr(user_data, "subcontractor_profile", None) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Subcontractor profile data is required",
+            )
+        profile_payload = jsonable_encoder(
+            {
+                "name": f"{user_data.subcontractor_profile.first_name} {user_data.subcontractor_profile.last_name}".strip()
             }
         )
 
@@ -647,7 +661,10 @@ async def confirm_registration(
             )
         )
     elif new_user.role == "subcontractor":
-        db.add(SubcontractorProfile(user_id=new_user.id, skills=[], services=[]))
+        payload = pending_user.profile_payload or {}
+        name_value = payload.get("name")
+        name = name_value.strip() if isinstance(name_value, str) and name_value.strip() else None
+        db.add(SubcontractorProfile(user_id=new_user.id, name=name, skills=[], services=[]))
     elif new_user.role == "homeowner":
         db.add(HomeownerProfile(user_id=new_user.id))
 

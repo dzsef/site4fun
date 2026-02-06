@@ -225,6 +225,7 @@
     "tagline": "Premium collaboration hub",
     "authed": {
       "welcomeBackGeneric": "Welcome back",
+      "welcomeBackWithName": "Welcome back {{name}}",
       "welcomeBackNamed": "Welcome back {{firstName}} {{lastName}}",
       "crewPortalTitle": "Crew portal",
       "findCrew": "Find crew"

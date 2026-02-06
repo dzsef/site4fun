@@ -11,15 +11,23 @@ const safeString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const readNames = (profile: ProfileResponse | null): { firstName: string | null; lastName: string | null } => {
-  if (!profile) return { firstName: null, lastName: null };
-  if (profile.role !== 'contractor' && profile.role !== 'specialist') {
-    return { firstName: null, lastName: null };
+const readWelcomeParts = (
+  profile: ProfileResponse | null,
+): { firstName: string | null; lastName: string | null; displayName: string | null } => {
+  if (!profile) return { firstName: null, lastName: null, displayName: null };
+
+  if (profile.role === 'contractor' || profile.role === 'specialist') {
+    const firstName = safeString(profile.profile.first_name);
+    const lastName = safeString(profile.profile.last_name);
+    return { firstName, lastName, displayName: null };
   }
-  return {
-    firstName: safeString(profile.profile.first_name),
-    lastName: safeString(profile.profile.last_name),
-  };
+
+  // For roles that only expose a single `name` field in the profile response.
+  if (profile.role === 'subcontractor' || profile.role === 'homeowner') {
+    return { firstName: null, lastName: null, displayName: safeString(profile.profile.name) };
+  }
+
+  return { firstName: null, lastName: null, displayName: null };
 };
 
 const AuthenticatedHome: React.FC = () => {
@@ -35,10 +43,11 @@ const AuthenticatedHome: React.FC = () => {
     return () => window.removeEventListener(PROFILE_CACHE_EVENT, handleCacheUpdated);
   }, []);
 
-  const { firstName, lastName } = readNames(profile);
-  const welcomeText =
-    firstName && lastName
-      ? t('home.authed.welcomeBackNamed', { firstName, lastName })
+  const { firstName, lastName, displayName } = readWelcomeParts(profile);
+  const welcomeText = firstName && lastName
+    ? t('home.authed.welcomeBackNamed', { firstName, lastName })
+    : displayName
+      ? t('home.authed.welcomeBackWithName', { name: displayName })
       : t('home.authed.welcomeBackGeneric');
 
   const showCrewPortal = profile?.role === 'contractor';
