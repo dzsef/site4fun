@@ -18,6 +18,7 @@ module.exports = defineConfig({
                 target: process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
                 changeOrigin: true,
                 secure: false,
+                ws: true,
             },
         },
         watch: {

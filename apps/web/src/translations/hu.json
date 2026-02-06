@@ -175,6 +175,7 @@
     "tagline": "Prémium együttműködési központ",
     "authed": {
       "welcomeBackGeneric": "Üdv újra",
+      "welcomeBackWithName": "Üdv újra {{name}}",
       "welcomeBackNamed": "Üdv újra {{firstName}} {{lastName}}",
       "crewPortalTitle": "Crew portal",
       "findCrew": "Csapat keresése"

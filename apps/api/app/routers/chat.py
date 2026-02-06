@@ -78,8 +78,22 @@ manager = ConnectionManager()
 
 
 def _display_name(user: User) -> str:
-    if user.role == "contractor" and user.contractor_profile and user.contractor_profile.name:
-        return user.contractor_profile.name
+    if user.role == "contractor" and user.contractor_profile:
+        profile = user.contractor_profile
+        business_name = getattr(profile, "business_name", None)
+        if isinstance(business_name, str) and business_name.strip():
+            return business_name.strip()
+        first_name = getattr(profile, "first_name", None)
+        last_name = getattr(profile, "last_name", None)
+        combined = " ".join(
+            [
+                part.strip()
+                for part in [first_name, last_name]
+                if isinstance(part, str) and part.strip()
+            ]
+        ).strip()
+        if combined:
+            return combined
     if user.role == "subcontractor" and user.subcontractor_profile and user.subcontractor_profile.name:
         return user.subcontractor_profile.name
     if user.role == "homeowner" and user.homeowner_profile and user.homeowner_profile.name:
