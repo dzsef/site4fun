@@ -1,6 +1,11 @@
 version: '3.9'
 
 services:
+  backend:
+    environment:
+      # Dev-only: allow registering without email confirmation
+      SKIP_EMAIL_CONFIRMATION: "${SKIP_EMAIL_CONFIRMATION:-true}"
+
   frontend-dev:
     image: node:20
     working_dir: /app/apps/web
@@ -28,4 +33,5 @@ services:
 
 volumes:
   web-node-modules:
+
 

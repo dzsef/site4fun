@@ -48,6 +48,13 @@ load_dotenv()
 
 CONFIRMATION_TOKEN_TTL_HOURS = int(os.getenv("EMAIL_CONFIRMATION_TTL_HOURS", "48"))
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+SKIP_EMAIL_CONFIRMATION = os.getenv("SKIP_EMAIL_CONFIRMATION", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "y",
+    "on",
+}
 
 
 def _build_confirmation_link(token: str) -> str:
@@ -67,6 +74,204 @@ def _compose_confirmation_email(recipient_email: str, confirmation_link: str) ->
         "The OSUS Team"
     )
     return subject, body
+
+
+def _create_default_profile(db: AsyncSession, user: User, payload: dict) -> None:
+    """
+    Create role-specific profile rows for a newly created user.
+
+    This mirrors the logic in `/confirm` so dev-created accounts behave like
+    confirmed ones.
+    """
+
+    if user.role == "contractor":
+        location = payload.get("business_location") or {}
+        birthday_value = payload.get("birthday")
+        birthday = None
+        if birthday_value:
+            try:
+                birthday = date.fromisoformat(birthday_value)
+            except ValueError:
+                birthday = None
+
+        first_name = payload.get("first_name")
+        last_name = payload.get("last_name")
+        business_name = payload.get("business_name")
+        raw_country = location.get("country")
+        raw_provinces = location.get("provinces") or []
+        raw_cities = location.get("cities") or []
+
+        normalized_cities = []
+        if isinstance(raw_cities, list):
+            seen_city_keys = set()
+            for entry in raw_cities:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip()
+                if not trimmed:
+                    continue
+                key = trimmed.lower()
+                if key in seen_city_keys:
+                    continue
+                seen_city_keys.add(key)
+                normalized_cities.append(trimmed)
+
+        country_value = None
+        if isinstance(raw_country, str):
+            cleaned_country = raw_country.strip().upper()
+            if cleaned_country:
+                country_value = cleaned_country
+
+        normalized_provinces = []
+        if isinstance(raw_provinces, list):
+            seen_province_keys = set()
+            for entry in raw_provinces:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip().upper()
+                if not trimmed:
+                    continue
+                if trimmed in seen_province_keys:
+                    continue
+                seen_province_keys.add(trimmed)
+                normalized_provinces.append(trimmed)
+
+        if country_value:
+            allowed_provinces = SUPPORTED_COUNTRIES.get(country_value, set())
+            if allowed_provinces:
+                normalized_provinces = [code for code in normalized_provinces if code in allowed_provinces]
+
+        db.add(
+            ContractorProfile(
+                user_id=user.id,
+                first_name=first_name.strip() if isinstance(first_name, str) and first_name.strip() else None,
+                last_name=last_name.strip() if isinstance(last_name, str) and last_name.strip() else None,
+                business_name=business_name.strip() if isinstance(business_name, str) and business_name.strip() else None,
+                business_country=country_value,
+                business_provinces=normalized_provinces,
+                business_cities=normalized_cities,
+                birthday=birthday,
+                gender=(payload.get("gender") or None),
+                years_in_business=payload.get("years_in_business"),
+            )
+        )
+        return
+
+    if user.role == "specialist":
+        location = payload.get("business_location") or {}
+        birthday_value = payload.get("birthday")
+        birthday = None
+        if birthday_value:
+            try:
+                birthday = date.fromisoformat(birthday_value)
+            except ValueError:
+                birthday = None
+
+        first_name = payload.get("first_name")
+        last_name = payload.get("last_name")
+        business_name = payload.get("business_name")
+        raw_country = location.get("country")
+        raw_provinces = location.get("provinces") or []
+        raw_cities = location.get("cities") or []
+
+        normalized_cities = []
+        if isinstance(raw_cities, list):
+            seen_city_keys = set()
+            for entry in raw_cities:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip()
+                if not trimmed:
+                    continue
+                key = trimmed.lower()
+                if key in seen_city_keys:
+                    continue
+                seen_city_keys.add(key)
+                normalized_cities.append(trimmed)
+
+        country_value = None
+        if isinstance(raw_country, str):
+            cleaned_country = raw_country.strip().upper()
+            if cleaned_country:
+                country_value = cleaned_country
+
+        normalized_provinces = []
+        if isinstance(raw_provinces, list):
+            seen_province_keys = set()
+            for entry in raw_provinces:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip().upper()
+                if not trimmed:
+                    continue
+                if trimmed in seen_province_keys:
+                    continue
+                seen_province_keys.add(trimmed)
+                normalized_provinces.append(trimmed)
+
+        if country_value:
+            allowed_provinces = SUPPORTED_COUNTRIES.get(country_value, set())
+            if allowed_provinces:
+                normalized_provinces = [code for code in normalized_provinces if code in allowed_provinces]
+
+        languages_payload = payload.get("languages") or []
+        normalized_languages = []
+        if isinstance(languages_payload, list):
+            seen_language_keys = set()
+            for entry in languages_payload:
+                if not isinstance(entry, str):
+                    continue
+                cleaned = entry.strip()
+                if not cleaned:
+                    continue
+                key = cleaned.lower()
+                if key in seen_language_keys:
+                    continue
+                seen_language_keys.add(key)
+                normalized_languages.append(cleaned)
+
+        years_of_experience = payload.get("years_of_experience")
+        years_value = None
+        if isinstance(years_of_experience, int):
+            years_value = years_of_experience
+        elif isinstance(years_of_experience, str):
+            try:
+                converted = int(years_of_experience.strip())
+            except (ValueError, TypeError):
+                converted = None
+            else:
+                years_value = converted if converted >= 0 else None
+
+        bio_value = payload.get("bio")
+        sanitized_bio = None
+        if isinstance(bio_value, str):
+            stripped = bio_value.strip()
+            sanitized_bio = stripped or None
+
+        db.add(
+            SpecialistProfile(
+                user_id=user.id,
+                first_name=first_name.strip() if isinstance(first_name, str) and first_name.strip() else None,
+                last_name=last_name.strip() if isinstance(last_name, str) and last_name.strip() else None,
+                business_name=business_name.strip() if isinstance(business_name, str) and business_name.strip() else None,
+                business_country=country_value,
+                business_provinces=normalized_provinces,
+                business_cities=normalized_cities,
+                birthday=birthday,
+                years_of_experience=years_value,
+                bio=sanitized_bio,
+                languages=normalized_languages,
+            )
+        )
+        return
+
+    if user.role == "subcontractor":
+        db.add(SubcontractorProfile(user_id=user.id, skills=[], services=[]))
+        return
+
+    if user.role == "homeowner":
+        db.add(HomeownerProfile(user_id=user.id))
+        return
 
 
 @router.post(
@@ -161,6 +366,26 @@ async def register(
         )
 
     hashed_password = hash_password(user_data.password)
+
+    if SKIP_EMAIL_CONFIRMATION:
+        # Dev convenience: create the user immediately (no pending row, no email).
+        # If there's an existing pending record for this email, remove it so login won't be blocked.
+        if pending_user is not None:
+            await db.delete(pending_user)
+            pending_user = None
+
+        new_user = User(
+            email=normalized_email,
+            hashed_password=hashed_password,
+            role=user_data.role,
+            username=username,
+        )
+        db.add(new_user)
+        await db.flush()
+        _create_default_profile(db, new_user, profile_payload or {})
+        await db.commit()
+        return RegistrationResponse(message="Registration successful! You can now log in.")
+
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(hours=CONFIRMATION_TOKEN_TTL_HOURS)
@@ -468,15 +693,39 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
             pending_filters.append(PendingUser.email == email_candidate)
             pending_filters.append(PendingUser.email == credential)
         pending_result = await db.execute(select(PendingUser).where(or_(*pending_filters)))
-        if pending_result.scalar_one_or_none() is not None:
+        pending_user = pending_result.scalar_one_or_none()
+        if pending_user is not None:
+            if not SKIP_EMAIL_CONFIRMATION:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Please confirm your email before logging in.",
+                )
+
+            # Dev convenience: auto-confirm pending users at login time.
+            if not verify_password(form_data.password, pending_user.hashed_password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Incorrect email or password",
+                )
+
+            new_user = User(
+                email=pending_user.email,
+                hashed_password=pending_user.hashed_password,
+                role=pending_user.role,
+                username=pending_user.username,
+            )
+            db.add(new_user)
+            await db.flush()
+            _create_default_profile(db, new_user, pending_user.profile_payload or {})
+            await db.delete(pending_user)
+            await db.commit()
+            user = new_user
+
+        if user is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please confirm your email before logging in.",
+                detail="Incorrect email or password",
             )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password",
-        )
 
     if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email or password")
