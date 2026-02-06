@@ -35,7 +35,7 @@ const specialistProfileSchema = z.object({
   languages: z.array(z.string().min(1)).optional(),
 });
 
-const registerSchema = z
+const baseRegisterSchema = z
   .object({
     email: z.string().email(),
     password: z.string().min(6),
@@ -193,7 +193,24 @@ const registerSchema = z
     }
   });
 
-type RegisterData = z.infer<typeof registerSchema>;
+const registerSchema = z.preprocess((input) => {
+  if (!input || typeof input !== 'object') return input;
+  const data = { ...(input as Record<string, unknown>) };
+  const role = data.role;
+
+  if (role === 'contractor') {
+    delete data.specialist_profile;
+  } else if (role === 'specialist') {
+    delete data.contractor_profile;
+  } else if (role === 'subcontractor') {
+    delete data.contractor_profile;
+    delete data.specialist_profile;
+  }
+
+  return data;
+}, baseRegisterSchema);
+
+type RegisterData = z.infer<typeof baseRegisterSchema>;
 
 type ContractorRegistrationProfile = z.infer<typeof contractorProfileSchema>;
 type SpecialistRegistrationProfile = z.infer<typeof specialistProfileSchema>;
@@ -281,6 +298,7 @@ const Register: React.FC = () => {
     setFocus,
   } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
+    shouldUnregister: true,
     defaultValues: {
       email: '',
       password: '',
