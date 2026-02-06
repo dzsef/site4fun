@@ -219,7 +219,40 @@
     "emptyChatBody": "Your thread history will appear once you send the first message.",
     "loadOlder": "Load older",
     "composerPlaceholder": "Type your message...",
-    "noMessagesSnippet": "No messages yet"
+    "noMessagesSnippet": "No messages yet",
+    "errors": {
+      "tooLong": "Keep the message under 200 characters."
+    },
+    "jobCard": {
+      "prompt": "Add job details",
+      "tagline": "30-second brief",
+      "title": "Create a job card",
+      "subtitle": "Send a structured brief the subcontractor can respond to. You can publish it as a posting later.",
+      "fields": {
+        "title": "Title",
+        "location": "Location",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "trade": "Trade",
+        "budget": "Budget range"
+      },
+      "errors": {
+        "title": "Add a title.",
+        "location": "Add a location.",
+        "dates": "Select the date range."
+      },
+      "cancel": "Cancel",
+      "send": "Send job card"
+    }
+  },
+  "marketplace": {
+    "tagline": "Open job marketplace",
+    "title": "Browse job postings",
+    "subtitle": "Find scopes that match your trade and reach out in one click. Contractors will reply in Messages.",
+    "empty": "No job postings yet.",
+    "apply": "Apply (message)",
+    "applySubtitle": "Send a short note to the contractor. This opens a chat thread.",
+    "applyPlaceholder": "Hi! I'm interested. I’m available next week and can share examples of similar work."
   },
   "home": {
     "tagline": "Premium collaboration hub",
@@ -348,6 +381,8 @@
     "tagline": "Contractor mission control",
     "title": "Choose the path that moves your projects forward",
     "subtitle": "Assemble your trusted crew or publish detailed scopes. Each workspace keeps communication transparent and timelines accountable.",
+    "lockedNotice": "Switch to a verified contractor account to unlock the full Hire Crew toolkit.",
+    "lockedBadge": "Locked",
     "cards": {
       "crew": {
         "title": "Build the crew you can trust",
@@ -355,9 +390,19 @@
         "cta": "Explore specialists"
       },
       "post": {
-        "title": "Create a job posting",
-        "description": "Launch a detailed scope with milestones, budget signals, and required certifications. Subcontractors can apply instantly so you assemble the best-fit team without delays.",
-        "cta": "Post a job"
+        "title": "Job postings",
+        "description": "Create, review, and publish postings with clear scope, timing, and skills. Turn quick briefs into public postings whenever you're ready.",
+        "cta": "Open postings"
+      },
+      "messages": {
+        "title": "Messages",
+        "description": "Chat in real time with subcontractors, share a lightweight job card, and keep every commitment traceable.",
+        "cta": "Open inbox"
+      },
+      "academy": {
+        "title": "Academy",
+        "description": "Short guides and templates to help you brief faster, vet better, and keep crews aligned.",
+        "cta": "Explore academy"
       }
     }
   },
@@ -429,6 +474,14 @@
       "bioPlaceholder": "This subcontractor is still crafting their introduction.",
       "visit": "Visit profile",
       "message": "Message"
+    },
+    "outreach": {
+      "title": "Send a quick note to {{name}}",
+      "subtitle": "This creates a chat thread. Add job details after you send the first message.",
+      "placeholder": "Hi! Are you available for a quick job next week? Location is downtown, flexible dates.",
+      "limit": "200 character limit",
+      "cancel": "Cancel",
+      "send": "Send message"
     }
   },
   "form": {

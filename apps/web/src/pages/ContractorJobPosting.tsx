@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,6 +36,7 @@ type ProfileRoleResponse = {
 const ContractorJobPosting: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [skills, setSkills] = React.useState<string[]>([]);
   const [skillDraft, setSkillDraft] = React.useState('');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -62,6 +63,33 @@ const ContractorJobPosting: React.FC = () => {
       location: '',
     },
   });
+
+  React.useEffect(() => {
+    const title = searchParams.get('title')?.trim() ?? '';
+    const location = searchParams.get('location')?.trim() ?? '';
+    const start_date = searchParams.get('start_date')?.trim() ?? '';
+    const end_date = searchParams.get('end_date')?.trim() ?? '';
+    const trade = searchParams.get('trade')?.trim() ?? '';
+    const budgetRange = searchParams.get('budget_range')?.trim() ?? '';
+
+    if (title || location || start_date || end_date || trade || budgetRange) {
+      reset({
+        title: title || '',
+        location: location || '',
+        start_date: start_date || '',
+        end_date: end_date || '',
+        description: title
+          ? `Scope: ${title}\n\nTiming: ${start_date || 'TBD'} → ${end_date || 'TBD'}\nLocation: ${location || 'TBD'}\nTrade: ${trade || 'TBD'}\nBudget: ${budgetRange || 'TBD'}\n\nDetails:\n- `
+          : '',
+        requirements: budgetRange ? `Budget range: ${budgetRange}` : '',
+      });
+      if (trade) {
+        setSkills([trade]);
+      }
+    }
+    // We intentionally only apply prefill once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   React.useEffect(() => {
     const verifyRole = async () => {
@@ -143,7 +171,7 @@ const ContractorJobPosting: React.FC = () => {
       }
       setIsSubmitting(true);
 
-    const payload = {
+      const payload = {
         title: values.title.trim(),
         description: values.description.trim(),
         requirements: values.requirements?.trim() ? values.requirements.trim() : undefined,

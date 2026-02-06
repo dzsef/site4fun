@@ -169,7 +169,40 @@
     "emptyChatBody": "Az üzenet előzményei az első üzenet elküldése után jelennek meg.",
     "loadOlder": "Korábbiak betöltése",
     "composerPlaceholder": "Írd be az üzeneted...",
-    "noMessagesSnippet": "Még nincs üzenet"
+    "noMessagesSnippet": "Még nincs üzenet",
+    "errors": {
+      "tooLong": "Az üzenet legfeljebb 200 karakter lehet."
+    },
+    "jobCard": {
+      "prompt": "Job card részletek",
+      "tagline": "30 másodperces brief",
+      "title": "Job card létrehozása",
+      "subtitle": "Küldj strukturált briefet, amire az alvállalkozó reagálhat. Később egy kattintással felhívássá alakíthatod.",
+      "fields": {
+        "title": "Cím",
+        "location": "Helyszín",
+        "startDate": "Kezdés",
+        "endDate": "Befejezés",
+        "trade": "Szakág",
+        "budget": "Költségkeret"
+      },
+      "errors": {
+        "title": "Adj meg címet.",
+        "location": "Adj meg helyszínt.",
+        "dates": "Válaszd ki az időintervallumot."
+      },
+      "cancel": "Mégse",
+      "send": "Job card küldése"
+    }
+  },
+  "marketplace": {
+    "tagline": "Nyitott projektpiac",
+    "title": "Projektfelhívások böngészése",
+    "subtitle": "Keress a szakágadhoz illő munkákat és írj a fővállalkozónak egy kattintással. A válasz az Üzenetekben érkezik.",
+    "empty": "Még nincs projektfelhívás.",
+    "apply": "Jelentkezés (üzenet)",
+    "applySubtitle": "Küldj rövid üzenetet a fővállalkozónak. Ezzel létrejön a beszélgetés.",
+    "applyPlaceholder": "Szia! Érdekel a munka. Jövő héten elérhető vagyok, és tudok hasonló referenciákat küldeni."
   },
   "home": {
     "tagline": "Prémium együttműködési központ",
@@ -298,6 +331,8 @@
     "tagline": "Fővállalkozói irányítópult",
     "title": "Válaszd ki, mivel viszed előre a projektjeidet",
     "subtitle": "Állítsd össze a megbízható csapatot vagy adj ki részletes feladatkiírást. Minden munkafelület átlátható kommunikációt és számon kérhető határidőket biztosít.",
+    "lockedNotice": "Válts hitelesített fővállalkozói fiókra, hogy felold a teljes Hire Crew eszköztárat.",
+    "lockedBadge": "Zárolva",
     "cards": {
       "crew": {
         "title": "Építsd fel a megbízható csapatodat",
@@ -305,9 +340,19 @@
         "cta": "Szakemberek felfedezése"
       },
       "post": {
-        "title": "Hirdess meg egy új projektet",
-        "description": "Indíts részletes kiírást mérföldkövekkel, költségkeret jelzésekkel és elvárt képesítésekkel. Az alvállalkozók azonnal jelentkezhetnek, így gyorsan összeáll a legjobb csapat.",
-        "cta": "Projekt közzététele"
+        "title": "Projektfelhívások",
+        "description": "Készíts, nézz át és tegyél közzé felhívásokat tiszta scope-pal, időkerettel és elvárt készségekkel. A gyors briefből bármikor publikált felhívás lehet.",
+        "cta": "Felhívások megnyitása"
+      },
+      "messages": {
+        "title": "Üzenetek",
+        "description": "Chatelj valós időben alvállalkozókkal, küldj könnyű job cardot, és tartsd nyomon az egyeztetéseket egy helyen.",
+        "cta": "Bejövő üzenetek"
+      },
+      "academy": {
+        "title": "Akadémia",
+        "description": "Rövid útmutatók és sablonok, hogy gyorsabban briefelj, jobban validálj, és egy ritmusban tartsd a csapatot.",
+        "cta": "Akadémia megnyitása"
       }
     }
   },
@@ -379,6 +424,14 @@
       "bioPlaceholder": "Ez az alvállalkozó még dolgozik a bemutatkozásán.",
       "visit": "Profil megnyitása",
       "message": "Üzenet"
+    },
+    "outreach": {
+      "title": "Küldj gyors üzenetet neki: {{name}}",
+      "subtitle": "Ezzel létrejön egy beszélgetés. Az első üzenet után hozzáadhatsz job card részleteket.",
+      "placeholder": "Szia! Elérhető vagy egy gyors munkára jövő héten? Belváros, rugalmas dátumok.",
+      "limit": "200 karakteres limit",
+      "cancel": "Mégse",
+      "send": "Üzenet küldése"
     }
   },
   "form": {

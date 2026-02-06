@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '../../types/chat';
 
@@ -8,6 +9,8 @@ export type ChatWindowProps = {
   onSend: (body: string) => Promise<void>;
   onLoadMore?: () => Promise<void>;
   hasMore?: boolean;
+  viewerRole?: 'contractor' | 'specialist' | 'subcontractor' | 'homeowner' | null;
+  jobCardPrompt?: { label: string; onClick: () => void } | null;
 };
 
 const formatTimestamp = (iso: string) => {
@@ -15,7 +18,51 @@ const formatTimestamp = (iso: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages, counterpartId, onSend, onLoadMore, hasMore }) => {
+const JOB_CARD_PREFIX = '__JOB_CARD__:';
+
+type JobCardPayload = {
+  v: 1;
+  title: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  trade: string;
+  budget_range: string;
+};
+
+const parseJobCard = (body: string): JobCardPayload | null => {
+  if (!body.startsWith(JOB_CARD_PREFIX)) return null;
+  const raw = body.slice(JOB_CARD_PREFIX.length).trim();
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw) as JobCardPayload;
+    if (payload && payload.v === 1) return payload;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const buildPostingLink = (job: JobCardPayload): string => {
+  const params = new URLSearchParams();
+  params.set('title', job.title);
+  params.set('location', job.location);
+  params.set('start_date', job.start_date);
+  params.set('end_date', job.end_date);
+  params.set('trade', job.trade);
+  params.set('budget_range', job.budget_range);
+  return `/contractor/job-postings/new?${params.toString()}`;
+};
+
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  messages,
+  counterpartId,
+  onSend,
+  onLoadMore,
+  hasMore,
+  viewerRole = null,
+  jobCardPrompt = null,
+}) => {
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -74,15 +121,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, counterpartId, onSend
     <div className="flex h-full flex-col rounded-[2.5rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_30px_120px_rgba(5,9,18,0.7)]">
       <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
         <span>{t('messages.title')}</span>
-        {hasMore && onLoadMore && (
-          <button
-            type="button"
-            onClick={() => onLoadMore()}
-            className="rounded-full border border-white/20 px-4 py-1 text-[0.6rem] tracking-[0.3em] text-white/70 transition-colors duration-200 hover:border-primary/60 hover:text-primary"
-          >
-            {t('messages.loadOlder')}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {jobCardPrompt && (
+            <button
+              type="button"
+              onClick={jobCardPrompt.onClick}
+              className="rounded-full border border-white/20 bg-white/5 px-4 py-1 text-[0.6rem] tracking-[0.3em] text-white/75 transition-colors duration-200 hover:border-primary/60 hover:text-primary"
+            >
+              {jobCardPrompt.label}
+            </button>
+          )}
+          {hasMore && onLoadMore && (
+            <button
+              type="button"
+              onClick={() => onLoadMore()}
+              className="rounded-full border border-white/20 px-4 py-1 text-[0.6rem] tracking-[0.3em] text-white/70 transition-colors duration-200 hover:border-primary/60 hover:text-primary"
+            >
+              {t('messages.loadOlder')}
+            </button>
+          )}
+        </div>
       </div>
 
       <div ref={viewportRef} className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
@@ -96,6 +154,93 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, counterpartId, onSend
         ) : (
           messages.map((message) => {
             const isMine = counterpartId != null ? message.sender_id !== counterpartId : true;
+            const jobCard = parseJobCard(message.body);
+            if (jobCard) {
+              return (
+                <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[78%] rounded-[1.75rem] border px-6 py-5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] ${
+                      isMine
+                        ? 'border-primary/40 bg-gradient-to-br from-primary/20 via-amber-400/10 to-orange-500/10 text-white'
+                        : 'border-white/10 bg-white/[0.06] text-white/90'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="space-y-2">
+                        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/60">
+                          Job card
+                        </p>
+                        <h3 className="text-lg font-semibold text-white">{jobCard.title}</h3>
+                      </div>
+                      <div className="text-[0.6rem] uppercase tracking-[0.35em] text-white/50">
+                        {formatTimestamp(message.created_at)}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 text-sm text-white/80 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/10 px-4 py-3">
+                        <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-white/55">Location</div>
+                        <div className="mt-1 text-white/90">{jobCard.location || '—'}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/10 px-4 py-3">
+                        <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-white/55">Dates</div>
+                        <div className="mt-1 text-white/90">
+                          {jobCard.start_date || '—'} → {jobCard.end_date || '—'}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/10 px-4 py-3">
+                        <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-white/55">Trade</div>
+                        <div className="mt-1 text-white/90">{jobCard.trade || '—'}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/10 px-4 py-3">
+                        <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-white/55">Budget</div>
+                        <div className="mt-1 text-white/90">{jobCard.budget_range || '—'}</div>
+                      </div>
+                    </div>
+
+                    {viewerRole === 'contractor' && isMine && (
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-white/60">
+                          Publish this as a posting to get more applicants.
+                        </p>
+                        <Link
+                          to={buildPostingLink(jobCard)}
+                          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_18px_60px_rgba(245,184,0,0.35)] transition-transform duration-300 hover:-translate-y-0.5"
+                        >
+                          Publish posting
+                        </Link>
+                      </div>
+                    )}
+
+                    {viewerRole === 'subcontractor' && !isMine && (
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => void onSend('Interested — can you share timing details?')}
+                          className="inline-flex items-center justify-center rounded-full bg-white/10 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-white transition hover:bg-white/15"
+                        >
+                          Interested
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onSend('Not a fit — thanks for reaching out.')}
+                          className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-white/80 transition hover:border-white/25 hover:text-white"
+                        >
+                          Not a fit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onSend('Quick question — what are the key deliverables?')}
+                          className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-white/80 transition hover:border-white/25 hover:text-white"
+                        >
+                          Ask a question
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                 <div

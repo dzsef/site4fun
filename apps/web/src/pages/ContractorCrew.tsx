@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 const apiOrigin = (() => {
@@ -35,6 +34,12 @@ type CrewCard = {
   skills: string[];
   services: string[];
   image_url: string | null;
+};
+
+const maskDisplayName = (name: string | null): string | null => {
+  if (!name) return null;
+  const first = name.trim().split(/\s+/)[0] ?? '';
+  return first.trim() ? first.trim() : null;
 };
 
 const gradients = [
@@ -85,6 +90,7 @@ type DetailPanelProps = {
 
 const DetailPanel: React.FC<DetailPanelProps> = ({ card, onClose, onMessage, messageBusy }) => {
   const { t } = useTranslation();
+  const maskedName = maskDisplayName(card.name);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -100,7 +106,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ card, onClose, onMessage, mes
           <div className="flex-1 space-y-3">
             <div>
               <h2 className="text-2xl font-semibold text-white">
-                {card.name || t('contractorCrew.card.noName')}
+                {maskedName || t('contractorCrew.card.noName')}
               </h2>
               <p className="text-sm uppercase tracking-[0.35em] text-primary/80">
                 {card.area || t('contractorCrew.card.areaUnknown')}
@@ -190,6 +196,9 @@ const ContractorCrew: React.FC = () => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [unauthenticated, setUnauthenticated] = useState(() => !localStorage.getItem('token'));
   const [messageBusyId, setMessageBusyId] = useState<number | null>(null);
+  const [outreachTarget, setOutreachTarget] = useState<CrewCard | null>(null);
+  const [outreachDraft, setOutreachDraft] = useState('');
+  const [outreachError, setOutreachError] = useState<string | null>(null);
 
   const isLocked = restricted || unauthenticated;
 
@@ -201,12 +210,41 @@ const ContractorCrew: React.FC = () => {
         return;
       }
 
-      setMessageBusyId(card.user_id);
-      setSelected(null);
-      navigate(`/messages?start=${card.user_id}`);
+      setOutreachError(null);
+      setOutreachDraft('');
+      setOutreachTarget(card);
     },
     [navigate, t, token],
   );
+
+  const closeOutreach = () => {
+    setOutreachTarget(null);
+    setOutreachDraft('');
+    setOutreachError(null);
+  };
+
+  const sendOutreach = async () => {
+    if (!outreachTarget) return;
+    const trimmed = outreachDraft.trim();
+    if (!trimmed) {
+      setOutreachError(t('form.errors.message'));
+      return;
+    }
+    if (trimmed.length > 200) {
+      setOutreachError(t('messages.errors.tooLong'));
+      return;
+    }
+
+    setMessageBusyId(outreachTarget.user_id);
+    setSelected(null);
+    try {
+      sessionStorage.setItem(`chat:outreach:${outreachTarget.user_id}`, trimmed);
+    } catch {
+      // ignore
+    }
+    closeOutreach();
+    navigate(`/messages?start=${outreachTarget.user_id}`);
+  };
 
   useEffect(() => {
     if (!selected) return;
@@ -427,7 +465,7 @@ const ContractorCrew: React.FC = () => {
                     <CrewAvatar imageUrl={card.image_url} name={card.name} paletteIndex={index} />
                     <div className="space-y-2">
                       <h2 className="text-xl font-semibold text-white">
-                        {card.name || t('contractorCrew.card.noName')}
+                        {maskDisplayName(card.name) || t('contractorCrew.card.noName')}
                       </h2>
                       <p className="text-xs uppercase tracking-[0.35em] text-white/70">
                         {card.area || t('contractorCrew.card.areaUnknown')}
@@ -518,6 +556,67 @@ const ContractorCrew: React.FC = () => {
           onMessage={handleStartConversation}
           messageBusy={messageBusyId === selected.user_id}
         />
+      )}
+
+      {outreachTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-[min(720px,92%)] overflow-hidden rounded-3xl border border-white/10 bg-dark-900/95 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.6)]">
+            <button
+              onClick={closeOutreach}
+              className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold uppercase tracking-[0.3em] text-white/70 transition-transform duration-300 hover:-translate-y-0.5 hover:text-white"
+            >
+              ✕
+            </button>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/75">
+                  {t('messages.title')}
+                </p>
+                <h2 className="text-2xl font-semibold text-white">
+                  {t('contractorCrew.outreach.title', { name: maskDisplayName(outreachTarget.name) ?? t('contractorCrew.card.noName') })}
+                </h2>
+                <p className="text-sm text-white/70">
+                  {t('contractorCrew.outreach.subtitle')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <textarea
+                  value={outreachDraft}
+                  onChange={(e) => setOutreachDraft(e.target.value)}
+                  maxLength={200}
+                  placeholder={t('contractorCrew.outreach.placeholder')}
+                  className="h-28 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-white/40 shadow-[0_15px_50px_rgba(3,7,18,0.55)] focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.32em] text-white/45">
+                  <span>{t('contractorCrew.outreach.limit')}</span>
+                  <span>{outreachDraft.length}/200</span>
+                </div>
+                {outreachError && (
+                  <p className="text-xs font-medium text-rose-300">{outreachError}</p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeOutreach}
+                  className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-white/75 transition hover:border-white/25 hover:text-white"
+                >
+                  {t('contractorCrew.outreach.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void sendOutreach()}
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 hover:scale-[1.02]"
+                >
+                  {t('contractorCrew.outreach.send')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import ConversationList from '../components/chat/ConversationList';
 import ChatWindow from '../components/chat/ChatWindow';
 import type { ChatEvent, ConversationSummary, Message } from '../types/chat';
+import type { ProfileResponse } from '../types/profile';
 import {
   createConversation,
   fetchConversations,
@@ -13,6 +14,35 @@ import {
   sendMessage,
 } from '../utils/chatApi';
 import { openChatSocket } from '../utils/chatSocket';
+import { PROFILE_CACHE_EVENT, readProfileCache } from '../utils/profileCache';
+
+type JobCardDraft = {
+  title: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  trade: string;
+  budget_range: string;
+};
+
+const JOB_CARD_PREFIX = '__JOB_CARD__:';
+
+const buildJobCardBody = (draft: JobCardDraft): string => {
+  return `${JOB_CARD_PREFIX}${JSON.stringify({ v: 1, ...draft })}`;
+};
+
+const mergeMessagesById = (base: Message[], extra: Message[]): Message[] => {
+  const map = new Map<string, Message>();
+  for (const message of base) map.set(message.id, message);
+  for (const message of extra) {
+    if (!map.has(message.id)) {
+      map.set(message.id, message);
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+};
 
 const sortConversations = (items: ConversationSummary[]) =>
   [...items].sort(
@@ -23,12 +53,25 @@ const Messages: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const token = useMemo(() => localStorage.getItem('token'), []);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [profile, setProfile] = useState<ProfileResponse | null>(() => readProfileCache());
+  const viewerRole = profile?.role ?? null;
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const conversationsRef = useRef<ConversationSummary[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [conversationsError, setConversationsError] = useState<string | null>(null);
+
+  const updateConversations = useCallback(
+    (updater: (prev: ConversationSummary[]) => ConversationSummary[]) => {
+      setConversations((prev) => {
+        const next = sortConversations(updater(prev));
+        conversationsRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   const initialConversation = searchParams.get('conversation');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(initialConversation);
@@ -44,20 +87,138 @@ const Messages: React.FC = () => {
   const searchParamsKey = searchParams.toString();
   const processedStartRef = useRef<string | null>(null);
 
+  // If both parameters are present, we treat `conversation` as the source of truth
+  // and remove `start` to prevent the start-flow from re-triggering.
+  useEffect(() => {
+    const start = searchParams.get('start');
+    const conversation = searchParams.get('conversation');
+    if (!start || !conversation) return;
+    const params = new URLSearchParams(searchParams);
+    params.delete('start');
+    setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const [jobCardOpen, setJobCardOpen] = useState(false);
+  const [jobCardError, setJobCardError] = useState<string | null>(null);
+  const [jobCardPromptConversationId, setJobCardPromptConversationId] = useState<string | null>(null);
+  const [jobCardDraft, setJobCardDraft] = useState<JobCardDraft>({
+    title: '',
+    location: '',
+    start_date: '',
+    end_date: '',
+    trade: 'General',
+    budget_range: '',
+  });
+
+  const outreachInFlightRef = useRef<Set<string>>(new Set());
+  const autoOutreachAttemptedRef = useRef<Map<string, string>>(new Map());
+
+  const peekOutreach = useCallback((counterpartyId: number): string | null => {
+    try {
+      const key = `chat:outreach:${counterpartyId}`;
+      return sessionStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const clearOutreach = useCallback((counterpartyId: number) => {
+    try {
+      sessionStorage.removeItem(`chat:outreach:${counterpartyId}`);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const sendPendingOutreach = useCallback(
+    async (conversationId: string, counterpartyId: number) => {
+      if (!token) return;
+      const outreach = peekOutreach(counterpartyId);
+      if (!outreach) return;
+
+      const trimmed = outreach.trim();
+      const safeOutreach = trimmed.length > 200 ? trimmed.slice(0, 200) : trimmed;
+      if (!safeOutreach) return;
+
+      const flightKey = `${conversationId}:${counterpartyId}`;
+      if (outreachInFlightRef.current.has(flightKey)) return;
+      outreachInFlightRef.current.add(flightKey);
+
+      // Ensure the job-card prompt is available right away; message send may fail/retry.
+      setJobCardPromptConversationId(conversationId);
+
+      try {
+        const response = await sendMessage(token, conversationId, safeOutreach);
+        clearOutreach(counterpartyId);
+        autoOutreachAttemptedRef.current.delete(flightKey);
+        setMessages((prev) => (prev.some((m) => m.id === response.message.id) ? prev : [...prev, response.message]));
+        updateConversations((prev) =>
+          prev.map((convo) =>
+            convo.id === conversationId
+              ? {
+                ...convo,
+                last_message: response.message,
+                updated_at: response.message.created_at,
+                unread_count: 0,
+              }
+              : convo,
+          ),
+        );
+      } catch (error) {
+        console.error('Failed to send outreach', error);
+        setMessagesError((error as Error).message || 'Failed to send message');
+      } finally {
+        outreachInFlightRef.current.delete(flightKey);
+      }
+    },
+    [clearOutreach, peekOutreach, token, updateConversations],
+  );
+
+  useEffect(() => {
+    const handleCacheUpdated = (event: Event) => {
+      const custom = event as CustomEvent<ProfileResponse | null>;
+      setProfile(custom.detail ?? null);
+    };
+    window.addEventListener(PROFILE_CACHE_EVENT, handleCacheUpdated);
+    return () => window.removeEventListener(PROFILE_CACHE_EVENT, handleCacheUpdated);
+  }, []);
+
+  useEffect(() => {
+    const updateToken = () => setToken(localStorage.getItem('token'));
+    window.addEventListener('auth-changed', updateToken);
+    window.addEventListener('storage', updateToken);
+    return () => {
+      window.removeEventListener('auth-changed', updateToken);
+      window.removeEventListener('storage', updateToken);
+    };
+  }, []);
+
+  // If the user has a pending outreach draft for the currently selected conversation,
+  // send it even if `start` is missing/was already stripped from the URL.
+  useEffect(() => {
+    if (!token) return;
+    const active = activeConversationIdRef.current;
+    if (!active) return;
+    const convo = conversationsRef.current.find((c) => c.id === active);
+    if (!convo) return;
+    const flightKey = `${active}:${convo.counterpart.user_id}`;
+    const draft = peekOutreach(convo.counterpart.user_id);
+    if (!draft) {
+      autoOutreachAttemptedRef.current.delete(flightKey);
+      return;
+    }
+    const prevDraft = autoOutreachAttemptedRef.current.get(flightKey);
+    if (prevDraft === draft) return;
+    autoOutreachAttemptedRef.current.set(flightKey, draft);
+    void sendPendingOutreach(active, convo.counterpart.user_id);
+  }, [activeConversationId, conversations, peekOutreach, sendPendingOutreach, token]);
+
   useEffect(() => {
     if (!token) {
       const next = encodeURIComponent('/messages');
       navigate(`/login?next=${next}`, { replace: true });
     }
   }, [navigate, token]);
-
-  const updateConversations = useCallback((updater: (prev: ConversationSummary[]) => ConversationSummary[]) => {
-    setConversations((prev) => {
-      const next = sortConversations(updater(prev));
-      conversationsRef.current = next;
-      return next;
-    });
-  }, []);
 
   const selectConversation = useCallback(
     (conversationId: string | null) => {
@@ -116,7 +277,8 @@ const Messages: React.FC = () => {
       setMessagesError(null);
       try {
         const response = await fetchMessages(token, conversationId);
-        setMessages(response.messages);
+        // Merge instead of overwriting to avoid races with immediate outreach sends.
+        setMessages((prev) => mergeMessagesById(response.messages, prev));
         setMessagesHasMore(response.has_more);
         if (response.messages.length) {
           const last = response.messages[response.messages.length - 1];
@@ -189,11 +351,11 @@ const Messages: React.FC = () => {
         prev.map((convo) =>
           convo.id === activeId
             ? {
-                ...convo,
-                last_message: response.message,
-                updated_at: response.message.created_at,
-                unread_count: 0,
-              }
+              ...convo,
+              last_message: response.message,
+              updated_at: response.message.created_at,
+              unread_count: 0,
+            }
             : convo,
         ),
       );
@@ -317,6 +479,9 @@ const Messages: React.FC = () => {
     );
     if (existingConversation) {
       selectConversation(existingConversation.id);
+      if (token) {
+        void sendPendingOutreach(existingConversation.id, counterpartyId);
+      }
       const params = new URLSearchParams(searchParamsKey);
       params.delete('start');
       params.set('conversation', existingConversation.id);
@@ -347,6 +512,8 @@ const Messages: React.FC = () => {
         params.delete('start');
         params.set('conversation', response.conversation.id);
         setSearchParams(params, { replace: true });
+
+        await sendPendingOutreach(response.conversation.id, counterpartyId);
       } catch (error) {
         if (!cancelled) {
           console.error(error);
@@ -374,7 +541,56 @@ const Messages: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [navigate, selectConversation, setSearchParams, startCounterpartyId, token, updateConversations, searchParamsKey]);
+  }, [clearOutreach, navigate, peekOutreach, selectConversation, setSearchParams, startCounterpartyId, token, updateConversations, viewerRole, searchParamsKey]);
+
+  const openJobCard = () => {
+    setJobCardError(null);
+    setJobCardOpen(true);
+  };
+
+  const closeJobCard = () => {
+    setJobCardOpen(false);
+    setJobCardError(null);
+  };
+
+  const submitJobCard = async () => {
+    try {
+      setJobCardError(null);
+      const activeId = activeConversationIdRef.current;
+      if (!token || !activeId) return;
+      if (!jobCardDraft.title.trim()) {
+        setJobCardError(t('messages.jobCard.errors.title'));
+        return;
+      }
+      if (!jobCardDraft.location.trim()) {
+        setJobCardError(t('messages.jobCard.errors.location'));
+        return;
+      }
+      if (!jobCardDraft.start_date || !jobCardDraft.end_date) {
+        setJobCardError(t('messages.jobCard.errors.dates'));
+        return;
+      }
+      const body = buildJobCardBody({
+        ...jobCardDraft,
+        title: jobCardDraft.title.trim(),
+        location: jobCardDraft.location.trim(),
+        budget_range: jobCardDraft.budget_range.trim(),
+        trade: jobCardDraft.trade.trim(),
+      });
+
+      await handleSendMessage(body);
+      try {
+        localStorage.setItem('jobcard:last', JSON.stringify(jobCardDraft));
+      } catch {
+        // ignore
+      }
+      setJobCardPromptConversationId(null);
+      closeJobCard();
+    } catch (e) {
+      console.error(e);
+      setJobCardError((e as Error).message);
+    }
+  };
 
   const background = (
     <div className="pointer-events-none absolute inset-0">
@@ -427,6 +643,12 @@ const Messages: React.FC = () => {
                 onSend={handleSendMessage}
                 onLoadMore={messagesHasMore ? handleLoadOlder : undefined}
                 hasMore={messagesHasMore}
+                viewerRole={viewerRole}
+                jobCardPrompt={
+                  viewerRole === 'contractor' && jobCardPromptConversationId === activeConversation.id
+                    ? { label: t('messages.jobCard.prompt'), onClick: openJobCard }
+                    : null
+                }
               />
             ) : (
               <div className="flex h-full items-center justify-center rounded-[2.5rem] border border-white/12 bg-white/[0.04] px-8 py-12 text-center text-sm text-white/60 shadow-[0_35px_120px_rgba(5,9,18,0.65)]">
@@ -459,6 +681,119 @@ const Messages: React.FC = () => {
           </div>
         )}
       </section>
+
+      {jobCardOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-[min(760px,92%)] overflow-hidden rounded-3xl border border-white/10 bg-dark-900/95 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.6)]">
+            <button
+              onClick={closeJobCard}
+              className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold uppercase tracking-[0.3em] text-white/70 transition-transform duration-300 hover:-translate-y-0.5 hover:text-white"
+            >
+              ✕
+            </button>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/75">
+                  {t('messages.jobCard.tagline')}
+                </p>
+                <h2 className="text-2xl font-semibold text-white">{t('messages.jobCard.title')}</h2>
+                <p className="text-sm text-white/70">{t('messages.jobCard.subtitle')}</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('messages.jobCard.fields.title')}
+                  </label>
+                  <input
+                    value={jobCardDraft.title}
+                    onChange={(e) => setJobCardDraft((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-white/40 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('messages.jobCard.fields.location')}
+                  </label>
+                  <input
+                    value={jobCardDraft.location}
+                    onChange={(e) => setJobCardDraft((prev) => ({ ...prev, location: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-white/40 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('messages.jobCard.fields.startDate')}
+                  </label>
+                  <input
+                    type="date"
+                    value={jobCardDraft.start_date}
+                    onChange={(e) => setJobCardDraft((prev) => ({ ...prev, start_date: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('messages.jobCard.fields.endDate')}
+                  </label>
+                  <input
+                    type="date"
+                    value={jobCardDraft.end_date}
+                    onChange={(e) => setJobCardDraft((prev) => ({ ...prev, end_date: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('messages.jobCard.fields.trade')}
+                  </label>
+                  <select
+                    value={jobCardDraft.trade}
+                    onChange={(e) => setJobCardDraft((prev) => ({ ...prev, trade: e.target.value }))}
+                    className="w-full appearance-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    {['General', 'Carpentry', 'Electrical', 'Plumbing', 'Drywall', 'Painting', 'Flooring', 'HVAC', 'Other'].map((trade) => (
+                      <option key={trade} value={trade}>
+                        {trade}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    {t('messages.jobCard.fields.budget')}
+                  </label>
+                  <input
+                    value={jobCardDraft.budget_range}
+                    onChange={(e) => setJobCardDraft((prev) => ({ ...prev, budget_range: e.target.value }))}
+                    placeholder="e.g. $2,000–$4,000"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-white/40 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+              </div>
+
+              {jobCardError && <p className="text-sm text-rose-200">{jobCardError}</p>}
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeJobCard}
+                  className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-white/75 transition hover:border-white/25 hover:text-white"
+                >
+                  {t('messages.jobCard.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void submitJobCard()}
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_28px_70px_rgba(245,184,0,0.45)] transition-transform duration-300 hover:scale-[1.02]"
+                >
+                  {t('messages.jobCard.send')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
