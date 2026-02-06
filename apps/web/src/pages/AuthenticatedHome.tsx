@@ -50,7 +50,56 @@ const AuthenticatedHome: React.FC = () => {
       ? t('home.authed.welcomeBackWithName', { name: displayName })
       : t('home.authed.welcomeBackGeneric');
 
-  const showCrewPortal = profile?.role === 'contractor';
+  const role = profile?.role ?? null;
+  const isContractor = role === 'contractor';
+  const isSubcontractor = role === 'subcontractor';
+
+  const cards: Array<{
+    id: 'crew' | 'postings' | 'messages' | 'academy' | 'marketplace' | 'profile';
+    to: string;
+    accent: string;
+    requiresContractor?: boolean;
+    requiresSubcontractor?: boolean;
+  }> = [
+    {
+      id: 'crew',
+      to: '/contractor/crew',
+      accent: 'from-sky-400/80 via-indigo-500/70 to-violet-500/70',
+      requiresContractor: true,
+    },
+    {
+      id: 'postings',
+      to: '/contractor/postings',
+      accent: 'from-emerald-400/80 via-teal-500/70 to-cyan-500/70',
+      requiresContractor: true,
+    },
+    {
+      id: 'marketplace',
+      to: '/subcontractor/marketplace',
+      accent: 'from-amber-400/80 via-orange-500/70 to-rose-500/70',
+      requiresSubcontractor: true,
+    },
+    {
+      id: 'messages',
+      to: '/messages',
+      accent: 'from-fuchsia-500/80 via-purple-500/70 to-indigo-500/70',
+    },
+    {
+      id: 'academy',
+      to: '/academy',
+      accent: 'from-rose-400/80 via-red-500/70 to-orange-500/70',
+    },
+    {
+      id: 'profile',
+      to: '/profile',
+      accent: 'from-slate-400/70 via-zinc-500/60 to-neutral-600/60',
+    },
+  ].filter((card) => {
+    if (card.requiresContractor) return isContractor;
+    if (card.requiresSubcontractor) return isSubcontractor;
+    // For other roles (specialist/homeowner), show only universal cards.
+    return !card.requiresContractor && !card.requiresSubcontractor;
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#050810] via-[#050a18] to-[#070b14] text-gray-100">
@@ -65,34 +114,55 @@ const AuthenticatedHome: React.FC = () => {
           <h1 className="text-4xl font-semibold leading-tight text-white md:text-5xl lg:text-6xl">
             {welcomeText}
           </h1>
+          <p className="max-w-3xl text-base text-white/70 md:text-lg">
+            {isContractor
+              ? t('home.authed.subtitleContractor')
+              : isSubcontractor
+                ? t('home.authed.subtitleSubcontractor')
+                : t('home.authed.subtitleGeneric')}
+          </p>
         </header>
 
-        {showCrewPortal ? (
-          <section className="grid gap-6 md:grid-cols-2 lg:gap-8">
-            <div className="relative overflow-hidden rounded-[2.25rem] border border-white/10 bg-dark-900/80 p-8 shadow-[0_36px_110px_rgba(2,6,18,0.6)] backdrop-blur-xl md:p-10">
-              <div className="pointer-events-none absolute inset-0 opacity-70">
-                <div className="absolute -right-16 top-8 h-56 w-56 rounded-full bg-primary/18 blur-3xl" />
-                <div className="absolute -bottom-24 left-[-10%] h-60 w-60 rounded-full bg-amber-400/12 blur-3xl" />
-              </div>
-              <div className="relative z-10 flex h-full flex-col gap-6">
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/70">
-                    {t('home.authed.crewPortalTitle')}
-                  </p>
-                </div>
-
-                <div className="mt-auto flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <Link
-                    to="/contractor/crew"
-                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-tr from-primary via-amber-400 to-orange-500 px-7 py-3 text-xs font-semibold uppercase tracking-[0.35em] text-dark-900 shadow-[0_26px_90px_rgba(245,184,0,0.4)] transition-transform duration-300 hover:scale-[1.02]"
+        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+          {cards.map((card) => (
+            <Link
+              key={card.id}
+              to={card.to}
+              className="group relative overflow-hidden rounded-[2.25rem] border border-white/10 bg-dark-900/70 p-7 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-transform duration-[760ms] ease-[cubic-bezier(.22,1.61,.36,1)] hover:-translate-y-2 hover:scale-[1.012]"
+            >
+              <div
+                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${card.accent} opacity-20 transition-opacity duration-700 group-hover:opacity-35`}
+              />
+              <div className="relative z-10 flex h-full flex-col gap-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+                  {t(`home.authed.cards.${card.id}.eyebrow`)}
+                </p>
+                <h2 className="text-2xl font-semibold text-white">
+                  {t(`home.authed.cards.${card.id}.title`)}
+                </h2>
+                <p className="text-sm leading-relaxed text-white/70">
+                  {t(`home.authed.cards.${card.id}.description`)}
+                </p>
+                <div className="mt-auto inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.35em] text-white/80 transition-[gap,color] duration-700 group-hover:gap-5 group-hover:text-white">
+                  <span>{t(`home.authed.cards.${card.id}.cta`)}</span>
+                  <svg
+                    aria-hidden="true"
+                    className="h-5 w-5 text-white/70 transition-transform duration-700 group-hover:translate-x-1 group-hover:text-white"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    {t('home.authed.findCrew')}
-                  </Link>
+                    <path d="M5 12h14" />
+                    <path d="m13 6 6 6-6 6" />
+                  </svg>
                 </div>
               </div>
-            </div>
-          </section>
-        ) : null}
+            </Link>
+          ))}
+        </section>
       </main>
     </div>
   );

@@ -251,6 +251,7 @@
     "subtitle": "Find scopes that match your trade and reach out in one click. Contractors will reply in Messages.",
     "empty": "No job postings yet.",
     "apply": "Apply (message)",
+    "applyPrefill": "Hi! I'm interested in “{{title}}”. I'm available next week and can share examples of similar work.",
     "applySubtitle": "Send a short note to the contractor. This opens a chat thread.",
     "applyPlaceholder": "Hi! I'm interested. I’m available next week and can share examples of similar work."
   },
@@ -260,8 +261,47 @@
       "welcomeBackGeneric": "Welcome back",
       "welcomeBackWithName": "Welcome back {{name}}",
       "welcomeBackNamed": "Welcome back {{firstName}} {{lastName}}",
-      "crewPortalTitle": "Crew portal",
-      "findCrew": "Find crew"
+      "subtitleContractor": "Your contractor dashboard — subcontractor directory, job postings, and messages in one place.",
+      "subtitleSubcontractor": "Your subcontractor dashboard — browse job postings and reach out in one click.",
+      "subtitleGeneric": "Pick up where you left off — messages, learning, and your profile are always one tap away.",
+      "cards": {
+        "crew": {
+          "eyebrow": "Crew portal",
+          "title": "Subcontractor directory",
+          "description": "Browse verified subs, compare skills, and start an outreach message.",
+          "cta": "Find crew"
+        },
+        "postings": {
+          "eyebrow": "Job postings",
+          "title": "Manage postings",
+          "description": "Create a posting, track what’s live, and reuse job card details when needed.",
+          "cta": "Open dashboard"
+        },
+        "marketplace": {
+          "eyebrow": "Marketplace",
+          "title": "Browse work",
+          "description": "View active postings and send a short note to apply — it opens a chat thread.",
+          "cta": "Explore postings"
+        },
+        "messages": {
+          "eyebrow": "Messages",
+          "title": "Continue chats",
+          "description": "Keep conversations moving and respond quickly when new messages arrive.",
+          "cta": "Open inbox"
+        },
+        "academy": {
+          "eyebrow": "Academy",
+          "title": "Learn fast",
+          "description": "Quick lessons and playbooks to level up your workflow.",
+          "cta": "Start learning"
+        },
+        "profile": {
+          "eyebrow": "Profile",
+          "title": "Your details",
+          "description": "Update your profile so others can trust what you do and where you work.",
+          "cta": "Edit profile"
+        }
+      }
     },
     "hero": {
       "title": "Shape construction partnerships with clarity",

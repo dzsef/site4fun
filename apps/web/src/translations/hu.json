@@ -201,6 +201,7 @@
     "subtitle": "Keress a szakágadhoz illő munkákat és írj a fővállalkozónak egy kattintással. A válasz az Üzenetekben érkezik.",
     "empty": "Még nincs projektfelhívás.",
     "apply": "Jelentkezés (üzenet)",
+    "applyPrefill": "Szia! Érdekel a(z) „{{title}}” munka. Jövő héten elérhető vagyok, és tudok hasonló referenciákat küldeni.",
     "applySubtitle": "Küldj rövid üzenetet a fővállalkozónak. Ezzel létrejön a beszélgetés.",
     "applyPlaceholder": "Szia! Érdekel a munka. Jövő héten elérhető vagyok, és tudok hasonló referenciákat küldeni."
   },
@@ -210,8 +211,47 @@
       "welcomeBackGeneric": "Üdv újra",
       "welcomeBackWithName": "Üdv újra {{name}}",
       "welcomeBackNamed": "Üdv újra {{firstName}} {{lastName}}",
-      "crewPortalTitle": "Crew portal",
-      "findCrew": "Csapat keresése"
+      "subtitleContractor": "Fővállalkozói dashboard — alvállalkozói adatbázis, projektfelhívások és üzenetek egy helyen.",
+      "subtitleSubcontractor": "Alvállalkozói dashboard — böngészd a projektfelhívásokat és jelentkezz egy kattintással.",
+      "subtitleGeneric": "Folytasd ott, ahol abbahagytad — üzenetek, tananyagok és a profilod egy kattintásra.",
+      "cards": {
+        "crew": {
+          "eyebrow": "Crew portal",
+          "title": "Alvállalkozói adatbázis",
+          "description": "Böngéssz ellenőrzött alvállalkozókat, nézd meg a skilljeiket, és írj nekik üzenetet.",
+          "cta": "Csapat keresése"
+        },
+        "postings": {
+          "eyebrow": "Projektfelhívások",
+          "title": "Felhívások kezelése",
+          "description": "Hozz létre felhívást, kezeld a publikáltakat, és használd újra a job card adatait.",
+          "cta": "Dashboard megnyitása"
+        },
+        "marketplace": {
+          "eyebrow": "Projektpiac",
+          "title": "Munkák böngészése",
+          "description": "Nézd meg az aktív felhívásokat, és jelentkezz rövid üzenettel — ezzel chat indul.",
+          "cta": "Felhívások megnyitása"
+        },
+        "messages": {
+          "eyebrow": "Üzenetek",
+          "title": "Beszélgetések",
+          "description": "Tartsd mozgásban a beszélgetéseket, és reagálj gyorsan az új üzenetekre.",
+          "cta": "Inbox megnyitása"
+        },
+        "academy": {
+          "eyebrow": "Academy",
+          "title": "Gyors tanulás",
+          "description": "Rövid leckék és best practice-ek a hatékonyabb munkához.",
+          "cta": "Tanulás indítása"
+        },
+        "profile": {
+          "eyebrow": "Profil",
+          "title": "Adataid",
+          "description": "Tartsd frissen a profilod, hogy mások lássák, miben és hol vagy erős.",
+          "cta": "Profil szerkesztése"
+        }
+      }
     },
     "hero": {
       "title": "Átlátható együttműködés az építőiparban",

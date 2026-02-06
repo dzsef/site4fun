@@ -55,7 +55,7 @@ const SubcontractorMarketplace: React.FC = () => {
 
     const openApply = (posting: JobPosting) => {
         setApplyTarget(posting);
-        setApplyDraft('');
+        setApplyDraft(t('marketplace.applyPrefill', { title: posting.title }));
         setApplyError(null);
     };
 
@@ -68,7 +68,7 @@ const SubcontractorMarketplace: React.FC = () => {
     const sendApply = () => {
         if (!applyTarget) return;
         if (!token) {
-            const next = encodeURIComponent('/jobs');
+            const next = encodeURIComponent('/subcontractor/marketplace');
             navigate(`/login?role=subcontractor&next=${next}`, { replace: true });
             return;
         }
