@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  frontend-dev:
+    image: node:20
+    working_dir: /app/apps/web
+    depends_on:
+      - backend
+    environment:
+      # Vite dev server should proxy /api/* to the backend container
+      VITE_DEV_PROXY_TARGET: http://backend:8000
+      # Helpful on WSL2 / network mounts if file watching is flaky
+      VITE_USE_POLLING: "true"
+      VITE_PORT: "5173"
+      VITE_HMR_CLIENT_PORT: "5173"
+    volumes:
+      - ./:/app
+      - web-node-modules:/app/apps/web/node_modules
+    ports:
+      - "5173:5173"
+    command: >-
+      sh -c "
+        corepack enable &&
+        corepack prepare pnpm@10.15.1 --activate &&
+        pnpm install --no-frozen-lockfile &&
+        pnpm dev --host 0.0.0.0 --port 5173
+      "
+
+volumes:
+  web-node-modules:
+

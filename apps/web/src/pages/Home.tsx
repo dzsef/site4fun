@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import AuthenticatedHome from './AuthenticatedHome';
 
 type PersonaKey = 'specialist' | 'contractor' | 'subcontractor';
 type FeatureKey = 'pipeline' | 'visibility' | 'handover' | 'compliance';
@@ -123,6 +124,21 @@ const heroMetrics: Array<{ valueKey: string; labelKey: string }> = [
 
 const Home: React.FC = () => {
   const { t } = useTranslation();
+  const [token, setToken] = React.useState<string | null>(() => localStorage.getItem('token'));
+
+  React.useEffect(() => {
+    const updateToken = () => setToken(localStorage.getItem('token'));
+    window.addEventListener('auth-changed', updateToken);
+    window.addEventListener('storage', updateToken);
+    return () => {
+      window.removeEventListener('auth-changed', updateToken);
+      window.removeEventListener('storage', updateToken);
+    };
+  }, []);
+
+  if (token) {
+    return <AuthenticatedHome />;
+  }
 
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-[#01030a] via-[#030820] to-[#040b1c] text-gray-100">

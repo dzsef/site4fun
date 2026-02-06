@@ -173,6 +173,12 @@
   },
   "home": {
     "tagline": "Prémium együttműködési központ",
+    "authed": {
+      "welcomeBackGeneric": "Üdv újra",
+      "welcomeBackNamed": "Üdv újra {{firstName}} {{lastName}}",
+      "crewPortalTitle": "Crew portal",
+      "findCrew": "Csapat keresése"
+    },
     "hero": {
       "title": "Átlátható együttműködés az építőiparban",
       "subtitle": "Válaszd ki a hozzád illő szerepkört, és használd azokat az eszközöket, amelyek modern és tiszta folyamatokat biztosítanak.",

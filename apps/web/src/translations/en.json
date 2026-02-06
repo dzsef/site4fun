@@ -223,6 +223,12 @@
   },
   "home": {
     "tagline": "Premium collaboration hub",
+    "authed": {
+      "welcomeBackGeneric": "Welcome back",
+      "welcomeBackNamed": "Welcome back {{firstName}} {{lastName}}",
+      "crewPortalTitle": "Crew portal",
+      "findCrew": "Find crew"
+    },
     "hero": {
       "title": "Shape construction partnerships with clarity",
       "subtitle": "Choose the journey that fits your role and access tools designed for transparent, modern project delivery.",

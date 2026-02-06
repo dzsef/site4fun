@@ -7,6 +7,7 @@ import {
   PROFILE_CACHE_EVENT,
   clearProfileCache,
   readProfileCache,
+  writeProfileCache,
 } from '../utils/profileCache';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -184,6 +185,7 @@ const ProfileSidebar: React.FC = () => {
           throw new Error('failed');
         }
         const payload = (await response.json()) as ProfileResponse;
+        writeProfileCache(payload);
         if (!cancelled) {
           setSummary(deriveSummary(payload, t('profileSidebar.emptyName')));
           setStatus('idle');
