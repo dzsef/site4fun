@@ -22,6 +22,7 @@ type ProfileSummary = {
 const gradientByRole: Record<ProfileRole, string> = {
   homeowner: 'from-emerald-400/80 via-emerald-500/70 to-teal-500/70',
   contractor: 'from-amber-400/80 via-orange-500/70 to-yellow-500/70',
+  specialist: 'from-rose-400/80 via-purple-500/70 to-indigo-500/70',
   subcontractor: 'from-sky-400/80 via-indigo-500/70 to-violet-600/70',
 };
 
@@ -36,8 +37,22 @@ const deriveSummary = (
   fallbackName: string,
 ): ProfileSummary => {
   const profile = (payload.profile ?? {}) as Record<string, unknown>;
+  const firstName = safeString(profile['first_name']);
+  const lastName = safeString(profile['last_name']);
+  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim() || null;
+  const businessName = safeString(profile['business_name']);
+  const businessLocation = profile['business_location'] as { cities?: unknown } | undefined;
+  let firstCity: string | null = null;
+  if (businessLocation && Array.isArray(businessLocation.cities)) {
+    firstCity = businessLocation.cities
+      .map((city) => safeString(city))
+      .find((value): value is string => Boolean(value)) ?? null;
+  }
+
   const nameCandidates: Array<string | null> = [
     safeString(profile['name']),
+    combinedName,
+    businessName,
     safeString(profile['company_name']),
     safeString(profile['companyName']),
     safeString(profile['display_name']),
@@ -47,6 +62,8 @@ const deriveSummary = (
   const secondaryCandidates: Array<string | null> = [
     payload.role === 'homeowner' ? safeString(profile['city']) : null,
     payload.role === 'contractor' ? safeString(profile['company_name']) : null,
+    payload.role === 'specialist' ? firstCity : null,
+    payload.role === 'specialist' ? businessName : null,
     payload.role === 'subcontractor' ? safeString(profile['area']) : null,
   ];
   const secondary = secondaryCandidates.find(Boolean) ?? undefined;

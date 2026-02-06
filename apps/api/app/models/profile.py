@@ -34,6 +34,25 @@ class ContractorProfile(Base):
     user = relationship("User", back_populates="contractor_profile")
 
 
+class SpecialistProfile(Base):
+    __tablename__ = "specialist_profiles"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    business_name = Column(String, nullable=True)
+    business_country = Column(String, nullable=True)
+    business_provinces = Column(JSONB, nullable=False, server_default="[]", default=list)
+    business_cities = Column(JSONB, nullable=False, server_default="[]", default=list)
+    birthday = Column(Date, nullable=True)
+    years_of_experience = Column(Integer, nullable=True)
+    bio = Column(Text, nullable=True)
+    languages = Column(JSONB, nullable=False, server_default="[]", default=list)
+    image_path = Column(String, nullable=True)
+
+    user = relationship("User", back_populates="specialist_profile")
+
+
 class SubcontractorProfile(Base):
     __tablename__ = "subcontractor_profiles"
 

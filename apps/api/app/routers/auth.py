@@ -25,6 +25,7 @@ from ..models.user import User, PendingUser
 from ..models.profile import (
     ContractorProfile,
     HomeownerProfile,
+    SpecialistProfile,
     SubcontractorProfile,
 )
 from ..schemas.user import (
@@ -93,17 +94,8 @@ async def register(
     )
     pending_user = pending_user_result.scalar_one_or_none()
 
-    contractor_profile_payload = None
-    username = None
-    if user_data.role == "contractor":
-        if user_data.contractor_profile is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Contractor profile data is required",
-            )
-        username = user_data.contractor_profile.username
-
-        username_result = await db.execute(select(User).where(User.username == username))
+    async def _ensure_username_available(username_value: str) -> None:
+        username_result = await db.execute(select(User).where(User.username == username_value))
         if username_result.scalar_one_or_none() is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -111,7 +103,7 @@ async def register(
             )
 
         pending_username_result = await db.execute(
-            select(PendingUser).where(PendingUser.username == username)
+            select(PendingUser).where(PendingUser.username == username_value)
         )
         existing_pending_username = pending_username_result.scalar_one_or_none()
         if existing_pending_username is not None and existing_pending_username.email != normalized_email:
@@ -120,7 +112,18 @@ async def register(
                 detail="Username already registered",
             )
 
-        contractor_profile_payload = jsonable_encoder(
+    profile_payload = None
+    username = None
+    if user_data.role == "contractor":
+        if user_data.contractor_profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Contractor profile data is required",
+            )
+        username = user_data.contractor_profile.username
+        await _ensure_username_available(username)
+
+        profile_payload = jsonable_encoder(
             {
                 "first_name": user_data.contractor_profile.first_name,
                 "last_name": user_data.contractor_profile.last_name,
@@ -131,6 +134,29 @@ async def register(
                 "birthday": user_data.contractor_profile.birthday,
                 "gender": user_data.contractor_profile.gender,
                 "years_in_business": user_data.contractor_profile.years_in_business,
+            }
+        )
+    elif user_data.role == "specialist":
+        if user_data.specialist_profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specialist profile data is required",
+            )
+        username = user_data.specialist_profile.username
+        await _ensure_username_available(username)
+
+        profile_payload = jsonable_encoder(
+            {
+                "first_name": user_data.specialist_profile.first_name,
+                "last_name": user_data.specialist_profile.last_name,
+                "business_name": user_data.specialist_profile.business_name,
+                "business_location": jsonable_encoder(
+                    user_data.specialist_profile.business_location
+                ),
+                "birthday": user_data.specialist_profile.birthday,
+                "years_of_experience": user_data.specialist_profile.years_of_experience,
+                "bio": user_data.specialist_profile.bio,
+                "languages": user_data.specialist_profile.languages,
             }
         )
 
@@ -147,7 +173,7 @@ async def register(
         pending_user.expires_at = expires_at
         pending_user.created_at = now
         pending_user.username = username
-        pending_user.profile_payload = contractor_profile_payload
+        pending_user.profile_payload = profile_payload
     else:
         pending_user = PendingUser(
             email=normalized_email,
@@ -156,7 +182,7 @@ async def register(
             token=token,
             expires_at=expires_at,
             username=username,
-            profile_payload=contractor_profile_payload,
+            profile_payload=profile_payload,
         )
         db.add(pending_user)
 
@@ -285,6 +311,114 @@ async def confirm_registration(
                 birthday=birthday,
                 gender=(payload.get("gender") or None),
                 years_in_business=payload.get("years_in_business"),
+            )
+        )
+    elif new_user.role == "specialist":
+        payload = pending_user.profile_payload or {}
+        location = payload.get("business_location") or {}
+
+        birthday_value = payload.get("birthday")
+        birthday = None
+        if birthday_value:
+            try:
+                birthday = date.fromisoformat(birthday_value)
+            except ValueError:
+                birthday = None
+
+        first_name = payload.get("first_name")
+        last_name = payload.get("last_name")
+        business_name = payload.get("business_name")
+        raw_country = location.get("country")
+        raw_provinces = location.get("provinces") or []
+        raw_cities = location.get("cities") or []
+
+        normalized_cities = []
+        if isinstance(raw_cities, list):
+            seen_city_keys = set()
+            for entry in raw_cities:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip()
+                if not trimmed:
+                    continue
+                key = trimmed.lower()
+                if key in seen_city_keys:
+                    continue
+                seen_city_keys.add(key)
+                normalized_cities.append(trimmed)
+
+        country_value = None
+        if isinstance(raw_country, str):
+            cleaned_country = raw_country.strip().upper()
+            if cleaned_country:
+                country_value = cleaned_country
+
+        normalized_provinces = []
+        if isinstance(raw_provinces, list):
+            seen_province_keys = set()
+            for entry in raw_provinces:
+                if not isinstance(entry, str):
+                    continue
+                trimmed = entry.strip().upper()
+                if not trimmed:
+                    continue
+                if trimmed in seen_province_keys:
+                    continue
+                seen_province_keys.add(trimmed)
+                normalized_provinces.append(trimmed)
+
+        if country_value:
+            allowed_provinces = SUPPORTED_COUNTRIES.get(country_value, set())
+            if allowed_provinces:
+                normalized_provinces = [code for code in normalized_provinces if code in allowed_provinces]
+
+        languages_payload = payload.get("languages") or []
+        normalized_languages = []
+        if isinstance(languages_payload, list):
+            seen_language_keys = set()
+            for entry in languages_payload:
+                if not isinstance(entry, str):
+                    continue
+                cleaned = entry.strip()
+                if not cleaned:
+                    continue
+                key = cleaned.lower()
+                if key in seen_language_keys:
+                    continue
+                seen_language_keys.add(key)
+                normalized_languages.append(cleaned)
+
+        years_of_experience = payload.get("years_of_experience")
+        years_value = None
+        if isinstance(years_of_experience, int):
+            years_value = years_of_experience
+        elif isinstance(years_of_experience, str):
+            try:
+                converted = int(years_of_experience.strip())
+            except (ValueError, TypeError):
+                converted = None
+            else:
+                years_value = converted if converted >= 0 else None
+
+        bio_value = payload.get("bio")
+        sanitized_bio = None
+        if isinstance(bio_value, str):
+            stripped = bio_value.strip()
+            sanitized_bio = stripped or None
+
+        db.add(
+            SpecialistProfile(
+                user_id=new_user.id,
+                first_name=first_name.strip() if isinstance(first_name, str) and first_name.strip() else None,
+                last_name=last_name.strip() if isinstance(last_name, str) and last_name.strip() else None,
+                business_name=business_name.strip() if isinstance(business_name, str) and business_name.strip() else None,
+                business_country=country_value,
+                business_provinces=normalized_provinces,
+                business_cities=normalized_cities,
+                birthday=birthday,
+                years_of_experience=years_value,
+                bio=sanitized_bio,
+                languages=normalized_languages,
             )
         )
     elif new_user.role == "subcontractor":

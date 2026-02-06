@@ -2,12 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-type PersonaKey = 'homeowner' | 'contractor' | 'subcontractor';
+type PersonaKey = 'specialist' | 'contractor' | 'subcontractor';
 type FeatureKey = 'pipeline' | 'visibility' | 'handover' | 'compliance';
 type WorkflowKey = 'discover' | 'assemble' | 'deliver';
 
 const personaRoutes: Record<PersonaKey, string> = {
-  homeowner: '/login?role=homeowner',
+  specialist: '/login?role=specialist',
   contractor: '/contractor',
   subcontractor: '/login?role=subcontractor',
 };
@@ -19,17 +19,18 @@ const personaMeta: Array<{
   icon: JSX.Element;
 }> = [
   {
-    key: 'homeowner',
-    accent: 'from-emerald-400 to-teal-400',
-    aura: 'bg-emerald-400/30',
+    key: 'specialist',
+    accent: 'from-rose-400 via-purple-500 to-indigo-500',
+    aura: 'bg-rose-400/30',
     icon: (
       <svg aria-hidden="true" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path d="M3 11.5 12 4l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
         <path
-          d="M5 10.5v8.25c0 .414.336.75.75.75h3.5v-4.5h5.5v4.5h3.5a.75.75 0 0 0 .75-.75V10.5"
+          d="M7 5.5h10l1.5 2.5H20a1 1 0 0 1 1 1V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a1 1 0 0 1 1-1h1.5L7 5.5Z"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+        <path d="M9.5 12.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0Z" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M15 8.5 16.5 6" strokeLinecap="round" />
       </svg>
     ),
   },

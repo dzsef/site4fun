@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .db import DATABASE_URL
-from .routers import rfq, auth, profile, chat
+from .routers import rfq, auth, profile, chat, job_postings
 from .utils.media import MEDIA_ROOT, ensure_media_directories
 
 
@@ -50,6 +50,7 @@ def create_app() -> FastAPI:
     # Include authentication and user management routes
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(profile.router, prefix="/api/v1/profile", tags=["profile"])
+    app.include_router(job_postings.router, prefix="/api/v1", tags=["job-postings"])
     app.include_router(chat.router, prefix="/api/v1")
 
     app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     # Ensure SQLAlchemy models are registered with metadata for Alembic
     from .models import user  # noqa: F401
     from .models import profile as profile_models  # noqa: F401
+    from .models import job_posting  # noqa: F401
     from .models import chat as chat_models  # noqa: F401
 
     @app.on_event("startup")

@@ -13,6 +13,7 @@ from ..db import get_db
 from ..models.profile import (
     ContractorProfile,
     HomeownerProfile,
+    SpecialistProfile,
     SubcontractorAvailability,
     SubcontractorProfile,
 )
@@ -26,6 +27,8 @@ from ..schemas.profile import (
     HomeownerProfileEnvelope,
     ProfileResponse,
     ProfileUpdateRequest,
+    SpecialistProfileData,
+    SpecialistProfileEnvelope,
     SubcontractorProfileData,
     SubcontractorProfileEnvelope,
     SubcontractorDirectoryCard,
@@ -63,6 +66,43 @@ async def _contractor_response(user: User, db: AsyncSession) -> ContractorProfil
         )
     return ContractorProfileEnvelope(
         role="contractor",
+        profile=data,
+        email=user.email,
+        username=user.username,
+    )
+
+
+async def _specialist_response(user: User, db: AsyncSession) -> SpecialistProfileEnvelope:
+    profile = await db.get(SpecialistProfile, user.id)
+    if profile is None:
+        data = SpecialistProfileData()
+    else:
+        location = None
+        if profile.business_country:
+            try:
+                location = BusinessLocation(
+                    country=profile.business_country,
+                    provinces=list(profile.business_provinces or []),
+                    cities=list(profile.business_cities or []),
+                )
+            except ValueError:
+                location = None
+        languages = []
+        if isinstance(profile.languages, list):
+            languages = [item for item in profile.languages if isinstance(item, str)]
+        data = SpecialistProfileData(
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+            business_name=profile.business_name,
+            business_location=location,
+            birthday=profile.birthday,
+            years_of_experience=profile.years_of_experience,
+            bio=profile.bio,
+            languages=languages,
+            image_url=image_path_to_url(profile.image_path),
+        )
+    return SpecialistProfileEnvelope(
+        role="specialist",
         profile=data,
         email=user.email,
         username=user.username,
@@ -112,6 +152,8 @@ async def _homeowner_response(user: User, db: AsyncSession) -> HomeownerProfileE
 async def _serialize_profile(user: User, db: AsyncSession) -> ProfileResponse:
     if user.role == "contractor":
         return await _contractor_response(user, db)
+    if user.role == "specialist":
+        return await _specialist_response(user, db)
     if user.role == "subcontractor":
         return await _subcontractor_response(user, db)
     if user.role == "homeowner":
@@ -224,6 +266,98 @@ async def update_profile(
         await db.commit()
         await db.refresh(profile)
         return await _contractor_response(current_user, db)
+
+    if current_user.role == "specialist":
+        profile = await db.get(SpecialistProfile, current_user.id)
+        if profile is None:
+            profile = SpecialistProfile(user_id=current_user.id)
+            db.add(profile)
+        data = payload.profile
+        if data.business_location is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business location is required",
+            )
+
+        location = data.business_location
+        normalized_provinces = []
+        seen_provinces = set()
+        for province in location.provinces:
+            trimmed = province.strip().upper()
+            if not trimmed:
+                continue
+            key = trimmed.lower()
+            if key in seen_provinces:
+                continue
+            seen_provinces.add(key)
+            normalized_provinces.append(trimmed)
+        if not normalized_provinces:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please provide at least one province or territory",
+            )
+
+        allowed = SUPPORTED_COUNTRIES.get(location.country, set())
+        if allowed and any(code not in allowed for code in normalized_provinces):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Province or territory is not available for the selected country",
+            )
+
+        normalized_cities = []
+        seen_cities = set()
+        for city in location.cities:
+            trimmed = city.strip()
+            if not trimmed:
+                continue
+            key = trimmed.lower()
+            if key in seen_cities:
+                continue
+            seen_cities.add(key)
+            normalized_cities.append(trimmed)
+        if not normalized_cities:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please provide at least one business city",
+            )
+
+        if data.years_of_experience is not None and data.years_of_experience < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Years of experience cannot be negative",
+            )
+
+        if data.birthday and data.birthday >= date_type.today():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Birthday must be in the past",
+            )
+
+        normalized_languages = []
+        seen_languages = set()
+        for entry in data.languages:
+            trimmed = entry.strip()
+            if not trimmed:
+                continue
+            key = trimmed.lower()
+            if key in seen_languages:
+                continue
+            seen_languages.add(key)
+            normalized_languages.append(trimmed)
+
+        profile.first_name = data.first_name.strip() if data.first_name else None
+        profile.last_name = data.last_name.strip() if data.last_name else None
+        profile.business_name = data.business_name.strip() if data.business_name else None
+        profile.business_country = location.country
+        profile.business_provinces = normalized_provinces
+        profile.business_cities = normalized_cities
+        profile.birthday = data.birthday
+        profile.years_of_experience = data.years_of_experience
+        profile.bio = data.bio.strip() if data.bio else None
+        profile.languages = normalized_languages
+        await db.commit()
+        await db.refresh(profile)
+        return await _specialist_response(current_user, db)
 
     if current_user.role == "subcontractor":
         profile = await db.get(SubcontractorProfile, current_user.id)

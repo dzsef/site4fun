@@ -8,6 +8,7 @@ import type {
   ContractorProfile,
   HomeownerProfile,
   ProfileResponse,
+  SpecialistProfile,
   SubcontractorProfile,
 } from '../types/profile';
 import { readProfileCache, writeProfileCache, clearProfileCache } from '../utils/profileCache';
@@ -47,7 +48,7 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
   if (data.role === 'contractor') {
     const profile = data.profile;
     const rawLocation = profile.business_location ?? null;
-    let location: ContractorProfile['business_location'] = null;
+    let location: SpecialistProfile['business_location'] = null;
     if (rawLocation && typeof rawLocation === 'object') {
       const country = typeof rawLocation.country === 'string' ? rawLocation.country.trim().toUpperCase() : '';
       const provinces = Array.isArray(rawLocation.provinces)
@@ -82,6 +83,61 @@ const sanitizeProfile = (data: ProfileResponse): ProfileResponse => {
         birthday: profile.birthday ?? null,
         gender: profile.gender ?? null,
         years_in_business: Number.isNaN(yearsValue) ? null : yearsValue,
+        image_url: resolveImageUrl(profile.image_url ?? null),
+      },
+      email: data.email,
+      username: data.username,
+    };
+  }
+  if (data.role === 'specialist') {
+    const profile = data.profile;
+    const rawLocation = profile.business_location ?? null;
+    let location: ContractorProfile['business_location'] = null;
+    if (rawLocation && typeof rawLocation === 'object') {
+      const country = typeof rawLocation.country === 'string' ? rawLocation.country.trim().toUpperCase() : '';
+      const provinces = Array.isArray(rawLocation.provinces)
+        ? rawLocation.provinces
+            .map((province: unknown) => (typeof province === 'string' ? province.trim().toUpperCase() : ''))
+            .filter((province: string) => province.length > 0)
+        : [];
+      const cities = Array.isArray(rawLocation.cities)
+        ? rawLocation.cities
+            .map((city: unknown) => (typeof city === 'string' ? city.trim() : ''))
+            .filter((city: string) => city.length > 0)
+        : [];
+      if (country) {
+        location = { country, provinces, cities };
+      }
+    }
+
+    const yearsValue =
+      typeof profile.years_of_experience === 'number'
+        ? profile.years_of_experience
+        : profile.years_of_experience != null
+        ? Number(profile.years_of_experience)
+        : null;
+
+    const languages = Array.isArray(profile.languages)
+      ? Array.from(
+          new Set(
+            profile.languages
+              .map((language: unknown) => (typeof language === 'string' ? language.trim() : ''))
+              .filter((language: string) => language.length > 0),
+          ),
+        )
+      : [];
+
+    return {
+      role: 'specialist',
+      profile: {
+        first_name: profile.first_name ?? null,
+        last_name: profile.last_name ?? null,
+        business_name: profile.business_name ?? null,
+        business_location: location,
+        birthday: profile.birthday ?? null,
+        years_of_experience: Number.isNaN(yearsValue) ? null : yearsValue,
+        bio: profile.bio ?? null,
+        languages,
         image_url: resolveImageUrl(profile.image_url ?? null),
       },
       email: data.email,
@@ -294,6 +350,8 @@ const Profile: React.FC = () => {
     switch (profileData.role) {
       case 'contractor':
         return t('register.contractor');
+      case 'specialist':
+        return t('register.specialist');
       case 'subcontractor':
         return t('register.subcontractor');
       case 'homeowner':
@@ -308,6 +366,16 @@ const Profile: React.FC = () => {
     if (profileData.role === 'contractor') {
       return (
         <ContractorProfileForm
+          data={profileData.profile}
+          identity={{ email: profileData.email, username: profileData.username }}
+          onSave={handleUpdate}
+          saving={saving}
+        />
+      );
+    }
+    if (profileData.role === 'specialist') {
+      return (
+        <SpecialistProfileForm
           data={profileData.profile}
           identity={{ email: profileData.email, username: profileData.username }}
           onSave={handleUpdate}
@@ -942,6 +1010,655 @@ const ContractorProfileForm: React.FC<ContractorProfileFormProps> = ({ data, ide
             <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
               {t('profile.contractor.business.citiesHint')}
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={saving || !canSubmit}
+          className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary via-amber-400 to-rose-400 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-dark-900 shadow-[0_28px_80px_rgba(245,184,0,0.45)] transition-transform duration-300 ease-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saving ? t('profile.saving') : t('profile.save')}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+type SpecialistProfileFormProps = {
+  data: SpecialistProfile;
+  identity?: { email?: string; username?: string };
+  onSave: (payload: ProfileSavePayload<SpecialistProfile>) => void | Promise<void>;
+  saving: boolean;
+};
+
+type SpecialistFormValues = {
+  first_name: string;
+  last_name: string;
+  business_name: string;
+  business_country: string;
+  birthday: string;
+  years_of_experience: string;
+  bio: string;
+};
+
+const SpecialistProfileForm: React.FC<SpecialistProfileFormProps> = ({ data, identity, onSave, saving }) => {
+  const { t } = useTranslation();
+  const avatarObjectUrlRef = useRef<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(data.image_url);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUpdated, setAvatarUpdated] = useState(false);
+  const [cityDraft, setCityDraft] = useState('');
+  const [languageDraft, setLanguageDraft] = useState('');
+  const [cities, setCities] = useState<string[]>(() => data.business_location?.cities ?? []);
+  const [languages, setLanguages] = useState<string[]>(() => data.languages ?? []);
+  const [citiesDirty, setCitiesDirty] = useState(false);
+  const [languagesDirty, setLanguagesDirty] = useState(false);
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>(
+    () => data.business_location?.provinces ?? [],
+  );
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { isDirty },
+  } = useForm<SpecialistFormValues>({
+    defaultValues: {
+      first_name: data.first_name ?? '',
+      last_name: data.last_name ?? '',
+      business_name: data.business_name ?? '',
+      business_country: data.business_location?.country ?? COUNTRY_OPTIONS[0].code,
+      birthday: data.birthday ?? '',
+      years_of_experience: data.years_of_experience != null ? String(data.years_of_experience) : '',
+      bio: data.bio ?? '',
+    },
+  });
+
+  useEffect(() => {
+    reset({
+      first_name: data.first_name ?? '',
+      last_name: data.last_name ?? '',
+      business_name: data.business_name ?? '',
+      business_country: data.business_location?.country ?? COUNTRY_OPTIONS[0].code,
+      birthday: data.birthday ?? '',
+      years_of_experience: data.years_of_experience != null ? String(data.years_of_experience) : '',
+      bio: data.bio ?? '',
+    });
+    setCities(data.business_location?.cities ?? []);
+    setLanguages(data.languages ?? []);
+    setSelectedProvinces(data.business_location?.provinces ?? []);
+    setCitiesDirty(false);
+    setLanguagesDirty(false);
+    setFormError(null);
+  }, [data, reset]);
+
+  useEffect(() => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+    setAvatarPreview(data.image_url ?? null);
+    setAvatarFile(null);
+    setAvatarUpdated(false);
+  }, [data]);
+
+  useEffect(
+    () => () => {
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      event.target.value = '';
+      return;
+    }
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = objectUrl;
+    setAvatarFile(file);
+    setAvatarPreview(objectUrl);
+    setAvatarUpdated(true);
+    event.target.value = '';
+  };
+
+  const watchCountry = watch('business_country');
+  const selectedCountry = useMemo(() => (watchCountry || COUNTRY_OPTIONS[0].code).toUpperCase(), [watchCountry]);
+  const provinceOptions = useMemo(
+    () => PROVINCES_BY_COUNTRY[selectedCountry] ?? [],
+    [selectedCountry],
+  );
+
+  useEffect(() => {
+    setSelectedProvinces((prev) => {
+      const allowed = new Set(provinceOptions.map((option) => option.code));
+      const filtered = prev.filter((code) => allowed.has(code));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [provinceOptions]);
+
+  const originalProvinces = useMemo(
+    () => (data.business_location?.provinces ?? []).slice().sort(),
+    [data.business_location?.provinces],
+  );
+
+  const provincesDirty = useMemo(() => {
+    const currentSorted = [...selectedProvinces].sort();
+    if (originalProvinces.length !== currentSorted.length) {
+      return true;
+    }
+    return originalProvinces.some((code, index) => code !== currentSorted[index]);
+  }, [originalProvinces, selectedProvinces]);
+
+  const addCity = () => {
+    const normalized = cityDraft.trim();
+    if (!normalized) return;
+    const exists = cities.some((city) => city.toLowerCase() === normalized.toLowerCase());
+    if (exists) {
+      setCityDraft('');
+      setFormError(null);
+      return;
+    }
+    setCities((prev) => [...prev, normalized]);
+    setCitiesDirty(true);
+    setCityDraft('');
+    setFormError(null);
+  };
+
+  const removeCity = (index: number) => {
+    setCities((prev) => prev.filter((_, idx) => idx !== index));
+    setCitiesDirty(true);
+    setFormError(null);
+  };
+
+  const handleCityKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addCity();
+      return;
+    }
+    if (event.key === 'Backspace' && !cityDraft && cities.length > 0) {
+      event.preventDefault();
+      removeCity(cities.length - 1);
+    }
+  };
+
+  const toggleProvince = (code: string) => {
+    const normalizedCode = code.toUpperCase();
+    const allowed = new Set(provinceOptions.map((option) => option.code));
+    if (!allowed.has(normalizedCode)) {
+      return;
+    }
+    setSelectedProvinces((prev) => {
+      if (prev.includes(normalizedCode)) {
+        const next = prev.filter((item) => item !== normalizedCode);
+        setFormError(null);
+        return next;
+      }
+      setFormError(null);
+      return [...prev, normalizedCode];
+    });
+  };
+
+  const addLanguage = () => {
+    const normalized = languageDraft.trim();
+    if (!normalized) return;
+    setLanguages((prev) => {
+      const exists = prev.some((language) => language.toLowerCase() === normalized.toLowerCase());
+      if (exists) {
+        return prev;
+      }
+      return [...prev, normalized];
+    });
+    setLanguageDraft('');
+    setLanguagesDirty(true);
+    setFormError(null);
+  };
+
+  const removeLanguage = (index: number) => {
+    setLanguages((prev) => prev.filter((_, idx) => idx !== index));
+    setLanguagesDirty(true);
+    setFormError(null);
+  };
+
+  const handleLanguageKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addLanguage();
+      return;
+    }
+    if (event.key === 'Backspace' && !languageDraft && languages.length > 0) {
+      event.preventDefault();
+      removeLanguage(languages.length - 1);
+    }
+  };
+
+  const shouldSubmitProfile = isDirty || citiesDirty || provincesDirty || languagesDirty;
+
+  const submit = (values: SpecialistFormValues) => {
+    const payload: ProfileSavePayload<SpecialistProfile> = {};
+    setFormError(null);
+
+    const country = (values.business_country || COUNTRY_OPTIONS[0].code).trim().toUpperCase();
+    const trimmedCities = cities.map((city) => city.trim()).filter((city) => city.length > 0);
+    const citySet = new Set<string>();
+    const uniqueCities: string[] = [];
+    trimmedCities.forEach((city) => {
+      const key = city.toLowerCase();
+      if (!citySet.has(key)) {
+        citySet.add(key);
+        uniqueCities.push(city);
+      }
+    });
+
+    const normalizedProvinces = Array.from(
+      new Set(
+        selectedProvinces
+          .map((province) => province.trim().toUpperCase())
+          .filter((province) => province.length > 0),
+      ),
+    );
+
+    const trimmedLanguages = languages.map((language) => language.trim()).filter((language) => language.length > 0);
+    const languageSet = new Set<string>();
+    const uniqueLanguages: string[] = [];
+    trimmedLanguages.forEach((language) => {
+      const key = language.toLowerCase();
+      if (!languageSet.has(key)) {
+        languageSet.add(key);
+        uniqueLanguages.push(language);
+      }
+    });
+
+    if (shouldSubmitProfile) {
+      const requiredChecks: Array<{ value: string; message: string }> = [
+        { value: values.first_name, message: t('profile.specialist.errors.firstNameRequired') },
+        { value: values.last_name, message: t('profile.specialist.errors.lastNameRequired') },
+        { value: values.business_name, message: t('profile.specialist.errors.businessNameRequired') },
+        { value: country, message: t('profile.specialist.errors.countryRequired') },
+      ];
+      for (const check of requiredChecks) {
+        if (!check.value.trim()) {
+          setFormError(check.message);
+          return;
+        }
+      }
+      if (normalizedProvinces.length === 0) {
+        setFormError(t('profile.specialist.errors.provinceRequired'));
+        return;
+      }
+      const allowedProvinceCodes = new Set(provinceOptions.map((option) => option.code));
+      if (normalizedProvinces.some((code) => !allowedProvinceCodes.has(code))) {
+        setFormError(t('profile.specialist.errors.provinceInvalid'));
+        return;
+      }
+      if (uniqueCities.length === 0) {
+        setFormError(t('profile.specialist.errors.cityRequired'));
+        return;
+      }
+
+      const yearsValue = values.years_of_experience ? Number(values.years_of_experience) : null;
+      if (yearsValue != null && (Number.isNaN(yearsValue) || yearsValue < 0)) {
+        setFormError(t('profile.specialist.errors.yearsInvalid'));
+        return;
+      }
+
+      if (values.birthday) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (values.birthday >= today) {
+          setFormError(t('profile.specialist.errors.birthdayFuture'));
+          return;
+        }
+      }
+
+      payload.profile = {
+        first_name: values.first_name.trim(),
+        last_name: values.last_name.trim(),
+        business_name: values.business_name.trim(),
+        business_location: {
+          country,
+          provinces: normalizedProvinces,
+          cities: uniqueCities,
+        },
+        birthday: values.birthday || null,
+        years_of_experience: yearsValue,
+        bio: values.bio ? values.bio.trim() : null,
+        languages: uniqueLanguages,
+        image_url: data.image_url ?? null,
+      };
+    }
+
+    if (avatarUpdated && avatarFile) {
+      payload.avatarFile = avatarFile;
+    }
+
+    if (!payload.profile && !payload.avatarFile) {
+      return;
+    }
+
+    onSave(payload);
+  };
+
+  const canSubmit = shouldSubmitProfile || avatarUpdated;
+
+  return (
+    <form onSubmit={handleSubmit(submit)} className="space-y-10">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_minmax(0,1fr)] lg:items-center">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-emerald-200">
+                {t('profile.specialist.identity.tagline')}
+              </span>
+              <h2 className="text-xl font-semibold text-white md:text-2xl">
+                {t('profile.specialist.identity.title')}
+              </h2>
+              <p className="text-sm text-white/70">{t('profile.specialist.identity.helper')}</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+                  {t('profile.specialist.identity.email')}
+                </p>
+                <div className="rounded-2xl border border-white/12 bg-white/10 px-4 py-2 text-sm text-white/80">
+                  {identity?.email ?? t('profile.specialist.identity.missing')}
+                </div>
+                <p className="text-[0.55rem] uppercase tracking-[0.28em] text-white/40">
+                  {t('profile.specialist.identity.locked')}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+                  {t('profile.specialist.identity.username')}
+                </p>
+                <div className="rounded-2xl border border-white/12 bg-white/10 px-4 py-2 text-sm text-white/80">
+                  {identity?.username ?? t('profile.specialist.identity.missing')}
+                </div>
+                <p className="text-[0.55rem] uppercase tracking-[0.28em] text-white/40">
+                  {t('profile.specialist.identity.locked')}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative h-24 w-24 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt={t('profile.avatar.label')}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-white/40">
+                    {t('profile.avatar.empty')}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+                  {t('profile.avatar.label')}
+                </p>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-white transition hover:border-primary/60 hover:text-primary">
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                  {t('profile.avatar.button')}
+                </label>
+                <p className="text-[0.55rem] uppercase tracking-[0.28em] text-white/35">
+                  {avatarUpdated ? t('profile.avatar.pending') : t('profile.avatar.helper')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-emerald-200">
+              {t('profile.specialist.personal.tagline')}
+            </span>
+            <h3 className="text-xl font-semibold text-white md:text-2xl">
+              {t('profile.specialist.personal.title')}
+            </h3>
+            <p className="text-sm text-white/70">{t('profile.specialist.personal.helper')}</p>
+          </div>
+          {formError && (
+            <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
+              {formError}
+            </div>
+          )}
+          <div className="grid gap-4 md:grid-cols-2">
+            <InputField
+              label={t('profile.specialist.personal.firstName')}
+              placeholder={t('profile.specialist.personal.firstNamePlaceholder')}
+              autoComplete="given-name"
+              {...register('first_name')}
+            />
+            <InputField
+              label={t('profile.specialist.personal.lastName')}
+              placeholder={t('profile.specialist.personal.lastNamePlaceholder')}
+              autoComplete="family-name"
+              {...register('last_name')}
+            />
+            <InputField
+              label={t('profile.specialist.personal.birthday')}
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              {...register('birthday')}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-emerald-200">
+              {t('profile.specialist.business.tagline')}
+            </span>
+            <h3 className="text-xl font-semibold text-white md:text-2xl">
+              {t('profile.specialist.business.title')}
+            </h3>
+            <p className="text-sm text-white/70">{t('profile.specialist.business.helper')}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <InputField
+              label={t('profile.specialist.business.name')}
+              placeholder={t('profile.specialist.business.namePlaceholder')}
+              autoComplete="organization"
+              {...register('business_name')}
+            />
+            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              {t('profile.specialist.business.country')}
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                  {...register('business_country')}
+                >
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-white/40">
+                  ▾
+                </span>
+              </div>
+            </label>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              {t('profile.specialist.business.provinces')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {provinceOptions.length === 0 ? (
+                <span className="rounded-full border border-dashed border-white/15 px-3 py-1 text-[0.6rem] uppercase tracking-[0.28em] text-white/40">
+                  {t('profile.specialist.business.noProvinces')}
+                </span>
+              ) : (
+                provinceOptions.map((option) => {
+                  const active = selectedProvinces.includes(option.code);
+                  return (
+                    <button
+                      key={option.code}
+                      type="button"
+                      onClick={() => toggleProvince(option.code)}
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] transition ${
+                        active
+                          ? 'border-primary bg-primary text-dark-900 shadow-[0_12px_30px_rgba(245,184,0,0.45)]'
+                          : 'border-white/15 bg-white/10 text-white hover:border-primary/60 hover:text-primary'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
+              {t('profile.specialist.business.provincesHint')}
+            </p>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+              {t('profile.specialist.business.cities')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {cities.length === 0 ? (
+                <span className="rounded-full border border-dashed border-white/15 px-3 py-1 text-[0.6rem] uppercase tracking-[0.28em] text-white/40">
+                  {t('profile.specialist.business.citiesEmpty')}
+                </span>
+              ) : (
+                cities.map((city, index) => (
+                  <span
+                    key={`${city}-${index.toString()}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-xs text-white shadow-[0_12px_30px_rgba(15,23,42,0.35)]"
+                  >
+                    {city}
+                    <button
+                      type="button"
+                      onClick={() => removeCity(index)}
+                      className="text-white/70 transition hover:text-rose-300"
+                      aria-label={t('profile.specialist.business.removeCity', { city })}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                value={cityDraft}
+                onChange={(event) => setCityDraft(event.target.value)}
+                onKeyDown={handleCityKeyDown}
+                placeholder={t('profile.specialist.business.cityPlaceholder')}
+                className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/35 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+              />
+              <button
+                type="button"
+                onClick={addCity}
+                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-white transition hover:border-primary/60 hover:text-primary"
+              >
+                {t('profile.specialist.business.addCity')}
+              </button>
+            </div>
+            <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
+              {t('profile.specialist.business.citiesHint')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-[0_26px_90px_rgba(3,7,18,0.6)] backdrop-blur-xl md:p-10">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.32em] text-emerald-200">
+              {t('profile.specialist.experience.tagline')}
+            </span>
+            <h3 className="text-xl font-semibold text-white md:text-2xl">
+              {t('profile.specialist.experience.title')}
+            </h3>
+            <p className="text-sm text-white/70">{t('profile.specialist.experience.helper')}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <InputField
+              label={t('profile.specialist.experience.years')}
+              type="number"
+              min={0}
+              max={150}
+              inputMode="numeric"
+              placeholder={t('profile.specialist.experience.yearsPlaceholder')}
+              {...register('years_of_experience')}
+            />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+                {t('profile.specialist.experience.languagesLabel')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {languages.length === 0 ? (
+                  <span className="rounded-full border border-dashed border-white/15 px-3 py-1 text-[0.6rem] uppercase tracking-[0.28em] text-white/40">
+                    {t('profile.specialist.experience.languagesEmpty')}
+                  </span>
+                ) : (
+                  languages.map((language, index) => (
+                    <span
+                      key={`${language}-${index.toString()}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-xs text-white shadow-[0_12px_30px_rgba(15,23,42,0.35)]"
+                    >
+                      {language}
+                      <button
+                        type="button"
+                        onClick={() => removeLanguage(index)}
+                        className="text-white/70 transition hover:text-rose-300"
+                        aria-label={t('profile.specialist.experience.removeLanguage', { language })}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  value={languageDraft}
+                  onChange={(event) => setLanguageDraft(event.target.value)}
+                  onKeyDown={handleLanguageKeyDown}
+                  placeholder={t('profile.specialist.experience.languagePlaceholder')}
+                  className="w-full rounded-2xl border border-white/10 bg-[#070B14]/80 px-4 py-3 text-sm text-white placeholder-white/35 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60 transition"
+                />
+                <button
+                  type="button"
+                  onClick={addLanguage}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-white transition hover:border-primary/60 hover:text-primary"
+                >
+                  {t('profile.specialist.experience.addLanguage')}
+                </button>
+              </div>
+              <p className="text-[0.6rem] uppercase tracking-[0.26em] text-white/45">
+                {t('profile.specialist.experience.languagesHint')}
+              </p>
+            </div>
+            <TextAreaField
+              label={t('profile.specialist.experience.bioLabel')}
+              placeholder={t('profile.specialist.experience.bioPlaceholder')}
+              rows={5}
+              className="md:col-span-2"
+              {...register('bio')}
+            />
           </div>
         </div>
       </div>

@@ -18,6 +18,7 @@
     "roles": {
       "homeowner": "Homeowner workspace",
       "contractor": "Contractor workspace",
+      "specialist": "Specialist workspace",
       "subcontractor": "Subcontractor workspace"
     }
   },
@@ -104,6 +105,70 @@
         "birthdayFuture": "Birthday must be a past date."
       }
     },
+    "specialist": {
+      "identity": {
+        "tagline": "Account foundation",
+        "title": "Immutable credentials",
+        "helper": "Email and username are fixed once you sign up. Contact support if you need adjustments.",
+        "email": "Sign-up email",
+        "username": "Username",
+        "missing": "Unavailable",
+        "locked": "Locked after sign-up"
+      },
+      "personal": {
+        "tagline": "Personal introduction",
+        "title": "Your on-record identity",
+        "helper": "Share who partners will collaborate with day-to-day.",
+        "firstName": "First name",
+        "firstNamePlaceholder": "e.g. Morgan",
+        "lastName": "Family name",
+        "lastNamePlaceholder": "e.g. Lee",
+        "birthday": "Birthday"
+      },
+      "business": {
+        "tagline": "Operating footprint",
+        "title": "Where you produce",
+        "helper": "Point collaborators to the regions where you accept briefs.",
+        "name": "Studio / business name",
+        "namePlaceholder": "e.g. Aurora Media Lab",
+        "country": "Country",
+        "provinces": "Provinces / Territories",
+        "noProvinces": "No provinces available",
+        "provincesHint": "Select every province or territory that you cover.",
+        "cities": "City coverage",
+        "citiesEmpty": "No cities added yet",
+        "cityPlaceholder": "Type a city and press Enter",
+        "addCity": "Add city",
+        "removeCity": "Remove {{city}}",
+        "citiesHint": "Add each city you can service. Use Enter to confirm every entry."
+      },
+      "experience": {
+        "tagline": "Story & craft",
+        "title": "Showcase your expertise",
+        "helper": "Highlight your experience, languages, and a short bio so teams know how you collaborate.",
+        "years": "Years of experience",
+        "yearsPlaceholder": "e.g. 8",
+        "languagesLabel": "Collaboration languages",
+        "languagesEmpty": "No languages added",
+        "languagePlaceholder": "Add a language and press Enter",
+        "addLanguage": "Add language",
+        "removeLanguage": "Remove {{language}}",
+        "languagesHint": "List every language you can comfortably collaborate in.",
+        "bioLabel": "Bio",
+        "bioPlaceholder": "Share your production style, niches, or recent highlights."
+      },
+      "errors": {
+        "firstNameRequired": "First name is required.",
+        "lastNameRequired": "Family name is required.",
+        "businessNameRequired": "Studio or business name is required.",
+        "countryRequired": "Country is required.",
+        "provinceRequired": "Select at least one province or territory.",
+        "provinceInvalid": "Province or territory is not available for the selected country.",
+        "cityRequired": "Add at least one city.",
+        "yearsInvalid": "Years of experience must be a non-negative number.",
+        "birthdayFuture": "Birthday must be a past date."
+      }
+    },
     "subcontractor": {
       "name": "Display name",
       "namePlaceholder": "e.g. Skyline Renovations",
@@ -180,7 +245,7 @@
     },
     "personaSection": {
       "title": "Molds itself to every role on site",
-      "subtitle": "Purpose-built workspaces give homeowners, contractors, and subcontractors the clarity they need without compromising momentum."
+      "subtitle": "Purpose-built workspaces give specialists, contractors, and subcontractors the clarity they need without compromising momentum."
     },
     "personas": {
       "homeowner": {
@@ -192,6 +257,11 @@
         "title": "Contractor",
         "description": "Coordinate subcontractors, budgets, and progress in one intuitive command centre.",
         "cta": "Continue as contractor"
+      },
+      "specialist": {
+        "title": "Specialist",
+        "description": "Apply your marketing or media production edge to briefs that fit your collaborators and cadence.",
+        "cta": "Continue as specialist"
       },
       "subcontractor": {
         "title": "Subcontractor",
@@ -270,13 +340,8 @@
   "contractorHub": {
     "tagline": "Contractor mission control",
     "title": "Choose the path that moves your projects forward",
-    "subtitle": "Track open homeowner requests or assemble your next on-site crew. Each workspace keeps communication transparent and timelines accountable.",
+    "subtitle": "Assemble your trusted crew or publish detailed scopes. Each workspace keeps communication transparent and timelines accountable.",
     "cards": {
-      "jobs": {
-        "title": "Discover available homeowner projects",
-        "description": "Browse curated opportunities where homeowners are still searching for their lead contractor. Evaluate scope, timelines, and budgets at a glance before taking the lead.",
-        "cta": "Review opportunities"
-      },
       "crew": {
         "title": "Build the crew you can trust",
         "description": "Search the subcontractor talent cloud with experience badges, availability windows, and verified references to keep your schedule on track.",
@@ -287,6 +352,48 @@
         "description": "Launch a detailed scope with milestones, budget signals, and required certifications. Subcontractors can apply instantly so you assemble the best-fit team without delays.",
         "cta": "Post a job"
       }
+    }
+  },
+  "contractorJobPosting": {
+    "tagline": "Job posting composer",
+    "title": "Publish a new job posting",
+    "subtitle": "Share scope, timing, and expectations so subcontractors instantly know whether they are a fit.",
+    "success": "Job posting created. Redirecting to your contractor hub...",
+    "fields": {
+      "title": "Job title",
+      "location": "Location",
+      "description": "Project description",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "skills": "Desired skills",
+      "requirements": "Additional requirements"
+    },
+    "placeholders": {
+      "title": "e.g. Interior repaint for office level",
+      "location": "e.g. Toronto, ON",
+      "description": "Outline the deliverables, scope, and collaboration style you expect.",
+      "skillsEmpty": "No skills added yet",
+      "skillInput": "Add a skill and press Enter",
+      "requirements": "List certifications, equipment, or compliance needs."
+    },
+    "actions": {
+      "addSkill": "Add skill",
+      "removeSkill": "Remove {{skill}}",
+      "submit": "Publish job",
+      "submitting": "Publishing..."
+    },
+    "errors": {
+      "authRequired": "Sign in as a contractor to publish a job posting.",
+      "notContractor": "Only contractor accounts can create job postings.",
+      "generic": "We couldn't save the job posting. Please try again.",
+      "skillsRequired": "Add at least one desired skill.",
+      "invalidTimeframe": "End date must be on or after the start date.",
+      "title": "Enter a title with at least 5 characters.",
+      "description": "Describe the project in at least 30 characters."
+    },
+    "accessDenied": {
+      "title": "Contractor access required",
+      "cta": "Sign in as contractor"
     }
   },
   "contractorCrew": {
@@ -363,6 +470,7 @@
     "role": "Role",
     "homeowner": "Homeowner",
     "contractor": "Contractor",
+    "specialist": "Specialist",
     "subcontractor": "Subcontractor",
     "submit": "Register",
     "haveAccount": "Already have an account?",
@@ -389,6 +497,9 @@
       },
       "contractor": {
         "caption": "Command schedules, crews, and capital from a precision dashboard."
+      },
+      "specialist": {
+        "caption": "Spotlight your marketing and media craft while signalling how you collaborate."
       },
       "subcontractor": {
         "caption": "Broadcast your craft with availability telemetry in a single share."
@@ -429,13 +540,42 @@
       "noProvinces": "No provinces available",
       "provincesHint": "Tap every province or territory where your business operates."
     },
+    "specialistExtra": {
+      "identity": "Personal identity",
+      "business": "Operating footprint",
+      "experience": "Experience & story",
+      "usernamePlaceholder": "Choose your studio handle",
+      "provinces": "Provinces / Territories",
+      "noProvinces": "No regions available",
+      "provincesHint": "Highlight every province or territory where you accept briefs.",
+      "citiesLabel": "Cities you support",
+      "citiesEmpty": "No cities added",
+      "cityPlaceholder": "Add a city",
+      "addCity": "Add city",
+      "cityHelper": "Type a city and press Enter to confirm.",
+      "removeCity": "Remove {{city}}",
+      "years": "Years of experience",
+      "yearsPlaceholder": "e.g. 8",
+      "languagesLabel": "Languages",
+      "languagesEmpty": "No languages added",
+      "languagePlaceholder": "Add a language",
+      "addLanguage": "Add language",
+      "languageHelper": "List the languages you can collaborate in.",
+      "removeLanguage": "Remove {{language}}",
+      "bioLabel": "Bio",
+      "bioPlaceholder": "Share your production approach, niches, or recent highlights."
+    },
     "successTitle": "Confirm your email",
     "successHint": "We've sent a confirmation email. Click the link inside to activate your account.",
     "goToLogin": "Go to login",
     "registerAgain": "Start a new registration",
     "successFallback": "Check your inbox and confirm your email address to continue.",
     "errors": {
-      "generic": "Registration failed. Please try again."
+      "generic": "Registration failed. Please try again.",
+      "validation": "Please fix the highlighted fields before continuing.",
+      "min3": "Please enter at least 3 characters.",
+      "min3Username": "Username must be at least 3 characters.",
+      "required": "This field is required."
     }
   },
   "verifyEmail": {

@@ -6,38 +6,13 @@ const ContractorHub: React.FC = () => {
   const { t } = useTranslation();
 
   const cards: Array<{
-    id: 'jobs' | 'crew' | 'post';
+    id: 'crew' | 'post';
     to: string;
     icon: JSX.Element;
     accent: string;
     shimmer: string;
     halo: string;
   }> = [
-    {
-      id: 'jobs',
-      to: '/login?role=contractor&view=jobs',
-      accent: 'from-amber-400/80 via-orange-500/70 to-rose-500/70',
-      shimmer: 'bg-amber-100/30',
-      halo: 'bg-amber-300/30',
-      icon: (
-        <svg
-          aria-hidden="true"
-          className="h-12 w-12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 7h16" />
-          <path d="M7 3h10" />
-          <path d="M6 7v13a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7" />
-          <path d="M9.5 11h5" />
-          <path d="M9.5 15h3" />
-        </svg>
-      ),
-    },
     {
       id: 'crew',
       to: '/contractor/crew',
@@ -65,7 +40,7 @@ const ContractorHub: React.FC = () => {
     },
     {
       id: 'post',
-      to: '/login?role=contractor&view=create',
+      to: '/contractor/job-postings/new',
       accent: 'from-emerald-400/80 via-teal-500/70 to-cyan-500/70',
       shimmer: 'bg-emerald-100/30',
       halo: 'bg-emerald-300/30',
@@ -110,7 +85,7 @@ const ContractorHub: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid flex-1 gap-8 md:grid-cols-3">
+        <div className="grid flex-1 gap-8 md:grid-cols-2">
           {cards.map(({ id, to, icon, accent, shimmer, halo }) => (
             <Link
               key={id}

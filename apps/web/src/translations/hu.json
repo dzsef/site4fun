@@ -18,6 +18,7 @@
     "roles": {
       "homeowner": "Tulajdonosi munkaterület",
       "contractor": "Fővállalkozói munkaterület",
+      "specialist": "Specialista munkaterület",
       "subcontractor": "Alvállalkozói munkaterület"
     }
   },
@@ -53,6 +54,70 @@
       "cityPlaceholder": "pl. Budapest",
       "company": "Cégnév",
       "companyPlaceholder": "pl. Épít-És Kft."
+    },
+    "specialist": {
+      "identity": {
+        "tagline": "Fiók alapjai",
+        "title": "Fix hitelesítők",
+        "helper": "Az email és a felhasználónév rögzített. Ha módosítanál rajtuk, keresd a támogatást.",
+        "email": "Regisztrációhoz használt email",
+        "username": "Felhasználónév",
+        "missing": "Nem elérhető",
+        "locked": "Regisztráció után zárolva"
+      },
+      "personal": {
+        "tagline": "Személyes bemutatkozás",
+        "title": "Ki áll a munka mögött?",
+        "helper": "Mutasd meg, kivel dolgoznak majd együtt a partnerek.",
+        "firstName": "Keresztnév",
+        "firstNamePlaceholder": "pl. Gábor",
+        "lastName": "Vezetéknév",
+        "lastNamePlaceholder": "pl. Szalai",
+        "birthday": "Születési dátum"
+      },
+      "business": {
+        "tagline": "Működési terület",
+        "title": "Hol vállalsz projekteket",
+        "helper": "Add meg azokat a régiókat, ahol marketinges vagy médiás megbízást vállalsz.",
+        "name": "Stúdió / cég neve",
+        "namePlaceholder": "pl. Aurora Media Lab",
+        "country": "Ország",
+        "provinces": "Tartományok / területek",
+        "noProvinces": "Nem érhető el tartomány",
+        "provincesHint": "Válaszd ki az összes tartományt vagy területet, ahol aktív vagy.",
+        "cities": "Város lefedettség",
+        "citiesEmpty": "Még nincs hozzáadott város",
+        "cityPlaceholder": "Írj be egy várost és nyomj Entert",
+        "addCity": "Város hozzáadása",
+        "removeCity": "{{city}} eltávolítása",
+        "citiesHint": "Sorold fel az összes várost, ahol munkát vállalsz. Enterrel erősítsd meg."
+      },
+      "experience": {
+        "tagline": "Tapasztalat és történet",
+        "title": "Emeld ki a szakértelmed",
+        "helper": "Mondd el, milyen tapasztalatod, nyelvtudásod és fókuszaid vannak.",
+        "years": "Tapasztalat évei",
+        "yearsPlaceholder": "pl. 8",
+        "languagesLabel": "Beszélt nyelvek",
+        "languagesEmpty": "Még nincs nyelv hozzáadva",
+        "languagePlaceholder": "Adj hozzá egy nyelvet és nyomj Entert",
+        "addLanguage": "Nyelv hozzáadása",
+        "removeLanguage": "{{language}} eltávolítása",
+        "languagesHint": "Sorold fel az összes nyelvet, amelyen magabiztosan együttműködsz.",
+        "bioLabel": "Bemutatkozás",
+        "bioPlaceholder": "Írd le a munkamódszered, specializációid vagy friss referenciáid."
+      },
+      "errors": {
+        "firstNameRequired": "A keresztnév megadása kötelező.",
+        "lastNameRequired": "A vezetéknév megadása kötelező.",
+        "businessNameRequired": "A stúdió vagy cégnév megadása kötelező.",
+        "countryRequired": "Az ország megadása kötelező.",
+        "provinceRequired": "Válassz legalább egy tartományt vagy területet.",
+        "provinceInvalid": "A kiválasztott tartomány vagy terület nem támogatott.",
+        "cityRequired": "Adj meg legalább egy várost.",
+        "yearsInvalid": "A tapasztalat éveinek száma nem lehet negatív.",
+        "birthdayFuture": "A születési dátum csak múltbeli lehet."
+      }
     },
     "subcontractor": {
       "name": "Megjelenített név",
@@ -130,7 +195,7 @@
     },
     "personaSection": {
       "title": "Minden szerephez alkalmazkodik",
-      "subtitle": "A dedikált felületek pontosan azt a rálátást adják a tulajdonosoknak, kivitelezőknek és alvállalkozóknak, amire a lendület megtartásához szükségük van."
+      "subtitle": "A dedikált felületek pontosan azt a rálátást adják a specialistáknak, fővállalkozóknak és alvállalkozóknak, amire a lendület megtartásához szükségük van."
     },
     "personas": {
       "homeowner": {
@@ -142,6 +207,11 @@
         "title": "Fővállalkozó",
         "description": "Egyetlen felületen irányíthatod az alvállalkozókat, a költségkeretet és az előrehaladást.",
         "cta": "Belépés fővállalkozóként"
+      },
+      "specialist": {
+        "title": "Specialista",
+        "description": "Marketinges vagy médiás szemléleteddel olyan projektekhez csatlakozhatsz, ahol az együttműködésed értéket ad.",
+        "cta": "Belépés specialistaként"
       },
       "subcontractor": {
         "title": "Alvállalkozó",
@@ -220,13 +290,8 @@
   "contractorHub": {
     "tagline": "Fővállalkozói irányítópult",
     "title": "Válaszd ki, mivel viszed előre a projektjeidet",
-    "subtitle": "Kövesd a tulajdonosok nyitott igényeit vagy állítsd össze a következő kivitelezői csapatodat. Minden munkafelület átlátható kommunikációt és számon kérhető határidőket biztosít.",
+    "subtitle": "Állítsd össze a megbízható csapatot vagy adj ki részletes feladatkiírást. Minden munkafelület átlátható kommunikációt és számon kérhető határidőket biztosít.",
     "cards": {
-      "jobs": {
-        "title": "Nézd meg a szabad tulajdonosi projekteket",
-        "description": "Válogatott lehetőségek, ahol a tulajdonos még keresi a fővállalkozót. Ismerd meg egy pillantással a terjedelmet, ütemezést és keretet, mielőtt átveszed a vezetést.",
-        "cta": "Ajánlatok megnyitása"
-      },
       "crew": {
         "title": "Építsd fel a megbízható csapatodat",
         "description": "Böngészd az alvállalkozói profiltárat tapasztalat jelvényekkel, elérhetőségi idősávokkal és hitelesített referenciákkal, hogy a menetrend a helyén maradjon.",
@@ -237,6 +302,48 @@
         "description": "Indíts részletes kiírást mérföldkövekkel, költségkeret jelzésekkel és elvárt képesítésekkel. Az alvállalkozók azonnal jelentkezhetnek, így gyorsan összeáll a legjobb csapat.",
         "cta": "Projekt közzététele"
       }
+    }
+  },
+  "contractorJobPosting": {
+    "tagline": "Projektfelhívás összeállítása",
+    "title": "Tegyél közzé új feladatkiírást",
+    "subtitle": "Írd le a scope-ot, az időkeretet és az elvárásokat, hogy az alvállalkozók azonnal lássák, passzolnak-e.",
+    "success": "A projektfelhívás elkészült. Átirányítás a fővállalkozói irányítópultra...",
+    "fields": {
+      "title": "Projekt címe",
+      "location": "Helyszín",
+      "description": "Projekt leírása",
+      "startDate": "Kezdési dátum",
+      "endDate": "Befejezési dátum",
+      "skills": "Elvárt készségek",
+      "requirements": "További követelmények"
+    },
+    "placeholders": {
+      "title": "pl. Irodaszint belső festése",
+      "location": "pl. Budapest, XIII. kerület",
+      "description": "Írd le a feladat célját, a mérföldköveket és az együttműködés menetét.",
+      "skillsEmpty": "Még nincs készség hozzáadva",
+      "skillInput": "Adj hozzá egy készséget és nyomj Entert",
+      "requirements": "Sorold fel a szükséges képesítéseket, eszközöket vagy megfelelőségi elvárásokat."
+    },
+    "actions": {
+      "addSkill": "Készség hozzáadása",
+      "removeSkill": "{{skill}} eltávolítása",
+      "submit": "Felhívás közzététele",
+      "submitting": "Közzététel..."
+    },
+    "errors": {
+      "authRequired": "Csak bejelentkezett fővállalkozók tehetnek közzé felhívást.",
+      "notContractor": "Ez a funkció csak fővállalkozóként érhető el.",
+      "generic": "Nem sikerült elmenteni a felhívást. Próbáld újra.",
+      "skillsRequired": "Adj hozzá legalább egy elvárt készséget.",
+      "invalidTimeframe": "A befejezési dátum nem lehet korábbi a kezdésnél.",
+      "title": "Adj meg legalább 5 karakteres címet.",
+      "description": "Írd le a projektet legalább 30 karakterben."
+    },
+    "accessDenied": {
+      "title": "Csak fővállalkozók számára",
+      "cta": "Belépés fővállalkozóként"
     }
   },
   "contractorCrew": {
@@ -310,6 +417,7 @@
     "role": "Szerep",
     "homeowner": "Tulajdonos",
     "contractor": "Fővállalkozó",
+    "specialist": "Specialista",
     "subcontractor": "Alvállalkozó",
     "submit": "Regisztráció",
     "haveAccount": "Már van fiókod?",
@@ -337,9 +445,37 @@
       "contractor": {
         "caption": "Irányítsd az ütemtervet, a csapatot és a keretet egy precíziós dashboardról."
       },
+      "specialist": {
+        "caption": "Emeld ki marketing és médiás szakértelmed, és mutasd meg, hogyan dolgozol együtt."
+      },
       "subcontractor": {
         "caption": "Mutasd meg a szakmai energiád, elérhetőségedet és referenciáidat egyetlen megosztással."
       }
+    },
+    "specialistExtra": {
+      "identity": "Személyes adatok",
+      "business": "Működési terület",
+      "experience": "Tapasztalat és bemutatkozás",
+      "usernamePlaceholder": "Válassz stúdió azonosítót",
+      "provinces": "Tartományok / területek",
+      "noProvinces": "Nem érhető el tartomány",
+      "provincesHint": "Jelöld meg az összes tartományt vagy területet, ahol megbízást vállalsz.",
+      "citiesLabel": "Támogatott városok",
+      "citiesEmpty": "Még nincs város hozzáadva",
+      "cityPlaceholder": "Város hozzáadása",
+      "addCity": "Város hozzáadása",
+      "cityHelper": "Írd be a város nevét és üss Entert a mentéshez.",
+      "removeCity": "{{city}} eltávolítása",
+      "years": "Tapasztalat évei",
+      "yearsPlaceholder": "pl. 8",
+      "languagesLabel": "Beszélt nyelvek",
+      "languagesEmpty": "Nincs megadott nyelv",
+      "languagePlaceholder": "Nyelv hozzáadása",
+      "addLanguage": "Nyelv hozzáadása",
+      "languageHelper": "Sorold fel, milyen nyelveken tudsz együttműködni.",
+      "removeLanguage": "{{language}} eltávolítása",
+      "bioLabel": "Bemutatkozás",
+      "bioPlaceholder": "Fogalmazd meg a munkamódszered, fókuszaid vagy friss projektjeid."
     },
     "successTitle": "Erősítsd meg az emailed",
     "successHint": "Elküldtük a megerősítő levelet. Kattints a linkre, hogy aktiváld a fiókodat.",
@@ -347,7 +483,11 @@
     "registerAgain": "Új regisztráció indítása",
     "successFallback": "Nézd meg a postaládád és erősítsd meg az email címed a folytatáshoz.",
     "errors": {
-      "generic": "A regisztráció nem sikerült. Próbáld újra."
+      "generic": "A regisztráció nem sikerült. Próbáld újra.",
+      "validation": "Kérjük, javítsd a kiemelt mezőket a folytatáshoz.",
+      "min3": "Adj meg legalább 3 karaktert.",
+      "min3Username": "A felhasználónév legalább 3 karakter legyen.",
+      "required": "Ez a mező kötelező."
     }
   },
   "verifyEmail": {

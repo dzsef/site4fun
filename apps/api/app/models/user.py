@@ -1,6 +1,6 @@
 """
 SQLAlchemy model for users. Each user has an email, a hashed password,
-a role indicating whether they are a homeowner, contractor or subcontractor,
+a role indicating whether they are a homeowner, contractor, subcontractor, or specialist,
 and a timestamp of when they were created.
 """
 
@@ -27,6 +27,12 @@ class User(Base):
         uselist=False,
         lazy="selectin",
     )
+    specialist_profile = relationship(
+        "SpecialistProfile",
+        back_populates="user",
+        uselist=False,
+        lazy="selectin",
+    )
     subcontractor_profile = relationship(
         "SubcontractorProfile",
         back_populates="user",
@@ -37,6 +43,12 @@ class User(Base):
         "HomeownerProfile",
         back_populates="user",
         uselist=False,
+        lazy="selectin",
+    )
+    job_postings = relationship(
+        "JobPosting",
+        back_populates="contractor",
+        cascade="all, delete-orphan",
         lazy="selectin",
     )
 

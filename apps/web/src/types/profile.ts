@@ -21,6 +21,18 @@ export type ContractorProfile = {
   image_url: string | null;
 };
 
+export type SpecialistProfile = {
+  first_name: string | null;
+  last_name: string | null;
+  business_name: string | null;
+  business_location: BusinessLocation | null;
+  birthday: string | null;
+  years_of_experience: number | null;
+  bio: string | null;
+  languages: string[];
+  image_url: string | null;
+};
+
 export type SubcontractorProfile = {
   name: string | null;
   bio: string | null;
@@ -43,5 +55,6 @@ export type HomeownerProfile = {
 
 export type ProfileResponse =
   | { role: 'contractor'; profile: ContractorProfile; email?: string; username?: string }
+  | { role: 'specialist'; profile: SpecialistProfile; email?: string; username?: string }
   | { role: 'subcontractor'; profile: SubcontractorProfile }
   | { role: 'homeowner'; profile: HomeownerProfile };

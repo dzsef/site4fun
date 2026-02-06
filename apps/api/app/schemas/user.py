@@ -119,21 +119,88 @@ class ContractorRegistrationProfile(BaseModel):
         return value
 
 
+class SpecialistRegistrationProfile(BaseModel):
+    username: constr(min_length=3, max_length=64)
+    first_name: constr(min_length=1, max_length=120)
+    last_name: constr(min_length=1, max_length=120)
+    business_name: constr(min_length=1, max_length=160)
+    business_location: ContractorLocation
+    birthday: Optional[date] = None
+    years_of_experience: Optional[int] = Field(default=None, ge=0, le=150)
+    bio: Optional[constr(max_length=2000)] = None
+    languages: List[str] = Field(default_factory=list)
+
+    @validator("username", "first_name", "last_name", "business_name")
+    def _strip_required_fields(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Value cannot be blank")
+        return stripped
+
+    @validator("bio", pre=True, always=True)
+    def _normalize_bio(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @validator("languages", pre=True)
+    def _normalize_languages(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            raise ValueError("Languages must be provided as a list")
+        normalized: List[str] = []
+        seen = set()
+        for item in value:
+            if not isinstance(item, str):
+                raise ValueError("Languages must be strings")
+            cleaned = item.strip()
+            if not cleaned:
+                continue
+            key = cleaned.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            normalized.append(cleaned)
+        return normalized
+
+    @validator("birthday")
+    def _validate_birthday(cls, value: Optional[date]) -> Optional[date]:
+        if value is None:
+            return None
+        if value >= date.today():
+            raise ValueError("Birthday must be in the past")
+        return value
+
+
 class UserCreate(UserBase):
     password: constr(min_length=6)
     contractor_profile: Optional[ContractorRegistrationProfile] = None
+    specialist_profile: Optional[SpecialistRegistrationProfile] = None
 
     @root_validator
     def _validate_role_requirements(cls, values):
         role = values.get("role")
         contractor_profile = values.get("contractor_profile")
+        specialist_profile = values.get("specialist_profile")
         if role == "contractor":
             if contractor_profile is None:
                 raise ValueError("contractor_profile is required for contractor registrations")
             if not contractor_profile.business_location.provinces:
                 raise ValueError("At least one province or territory must be provided")
+            values["specialist_profile"] = None
+        elif role == "specialist":
+            if specialist_profile is None:
+                raise ValueError("specialist_profile is required for specialist registrations")
+            if not specialist_profile.business_location.provinces:
+                raise ValueError("At least one province or territory must be provided")
+            values["contractor_profile"] = None
         else:
             values["contractor_profile"] = None
+            values["specialist_profile"] = None
         return values
 
 

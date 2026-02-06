@@ -80,6 +80,21 @@ class ContractorProfileData(BaseModel):
         orm_mode = True
 
 
+class SpecialistProfileData(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    business_name: Optional[str] = None
+    business_location: Optional[BusinessLocation] = None
+    birthday: Optional[date] = None
+    years_of_experience: Optional[int] = None
+    bio: Optional[str] = None
+    languages: List[str] = Field(default_factory=list)
+    image_url: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
 class SubcontractorProfileData(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
@@ -113,6 +128,13 @@ class ContractorProfileEnvelope(BaseModel):
     username: Optional[str] = None
 
 
+class SpecialistProfileEnvelope(BaseModel):
+    role: Literal["specialist"]
+    profile: SpecialistProfileData
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+
+
 class SubcontractorProfileEnvelope(BaseModel):
     role: Literal["subcontractor"]
     profile: SubcontractorProfileData
@@ -139,12 +161,14 @@ class SubcontractorDirectoryCard(BaseModel):
 
 ProfileResponse = Union[
     ContractorProfileEnvelope,
+    SpecialistProfileEnvelope,
     SubcontractorProfileEnvelope,
     HomeownerProfileEnvelope,
 ]
 
 ProfileUpdateRequest = Union[
     ContractorProfileEnvelope,
+    SpecialistProfileEnvelope,
     SubcontractorProfileEnvelope,
     HomeownerProfileEnvelope,
 ]

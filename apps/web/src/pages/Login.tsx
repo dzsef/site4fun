@@ -24,7 +24,7 @@ const Login: React.FC = () => {
 
   const rawRole = searchParams.get('role');
   const selectedRole =
-    rawRole === 'homeowner' || rawRole === 'contractor' || rawRole === 'subcontractor'
+    rawRole === 'homeowner' || rawRole === 'contractor' || rawRole === 'specialist' || rawRole === 'subcontractor'
       ? rawRole
       : null;
   const selectedRoleLabel = selectedRole ? t(`home.personas.${selectedRole}.title`) : null;
