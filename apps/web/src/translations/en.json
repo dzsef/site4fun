@@ -275,9 +275,9 @@
       "welcomeBackGeneric": "Welcome back",
       "welcomeBackWithName": "Welcome back {{name}}",
       "welcomeBackNamed": "Welcome back {{firstName}} {{lastName}}",
-      "subtitleContractor": "Your contractor dashboard — subcontractor directory, job postings, and messages in one place.",
-      "subtitleSubcontractor": "Your subcontractor dashboard — browse job postings and reach out in one click.",
-      "subtitleGeneric": "Pick up where you left off — messages, learning, and your profile are always one tap away.",
+      "subtitleContractor": "Your contractor dashboard - subcontractor directory, job postings, and messages in one place.",
+      "subtitleSubcontractor": "Your subcontractor dashboard - browse job postings and reach out in one click.",
+      "subtitleGeneric": "Pick up where you left off - messages, learning, and your profile are always one tap away.",
       "cards": {
         "crew": {
           "eyebrow": "Crew portal",
@@ -294,7 +294,7 @@
         "marketplace": {
           "eyebrow": "Marketplace",
           "title": "Browse work",
-          "description": "View active postings and send a short note to apply — it opens a chat thread.",
+          "description": "View active postings and send a short note to apply - it opens a chat thread.",
           "cta": "Explore postings"
         },
         "messages": {
