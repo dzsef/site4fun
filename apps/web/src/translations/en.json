@@ -223,6 +223,20 @@
     "errors": {
       "tooLong": "Keep the message under 200 characters."
     },
+    "application": {
+      "label": "Application",
+      "note": "Message",
+      "status": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      },
+      "actions": {
+        "accept": "Accept",
+        "reject": "Reject",
+        "working": "Working..."
+      }
+    },
     "jobCard": {
       "prompt": "Add job details",
       "tagline": "30-second brief",

@@ -173,8 +173,8 @@ const ContractorHub: React.FC = () => {
             const destination = token ? to : `/login?role=contractor&next=${encodeURIComponent(to)}`;
 
             return (
-              <Link
-                key={id}
+            <Link
+              key={id}
                 to={locked ? '/contractor' : destination}
                 onClick={(event) => {
                   if (locked) {
@@ -185,7 +185,7 @@ const ContractorHub: React.FC = () => {
                 className={`group relative flex h-full flex-col overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.06] p-8 text-left shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-transform duration-[760ms] ease-[cubic-bezier(.22,1.61,.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-dark-900 md:p-12 ${
                   locked ? 'cursor-not-allowed opacity-70' : 'hover:-translate-y-4 hover:scale-[1.017]'
                 }`}
-              >
+            >
               <span
                 className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${accent} opacity-60 transition-opacity duration-700 group-hover:opacity-75`}
               />
@@ -238,7 +238,7 @@ const ContractorHub: React.FC = () => {
                 <span className="absolute left-6 top-6 h-6 w-6 rounded-full border border-white/40 opacity-0 transition-opacity duration-700 group-hover:opacity-60" />
                 <span className="absolute left-6 top-6 h-6 w-6 rounded-full border border-white/40 opacity-0 transition-opacity duration-700 group-hover:opacity-0 group-hover:animate-ripple" />
               </span>
-              </Link>
+            </Link>
             );
           })}
         </div>

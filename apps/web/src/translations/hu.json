@@ -173,6 +173,20 @@
     "errors": {
       "tooLong": "Az üzenet legfeljebb 200 karakter lehet."
     },
+    "application": {
+      "label": "Jelentkezés",
+      "note": "Üzenet",
+      "status": {
+        "pending": "Függőben",
+        "accepted": "Elfogadva",
+        "rejected": "Elutasítva"
+      },
+      "actions": {
+        "accept": "Elfogadás",
+        "reject": "Elutasítás",
+        "working": "Folyamatban..."
+      }
+    },
     "jobCard": {
       "prompt": "Job card részletek",
       "tagline": "30 másodperces brief",

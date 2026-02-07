@@ -8,8 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..dependencies import get_current_user
+from ..models.job_application import JobApplication, JobApplicationStatus
 from ..models.job_posting import JobPosting
 from ..models.user import User
+from ..schemas.job_application import JobApplicationApplyRequest, JobApplicationOut
 from ..schemas.job_posting import JobPostingCreate, JobPostingOut
 
 router = APIRouter(prefix="/job-postings", tags=["job-postings"])
@@ -21,6 +23,11 @@ def _ensure_contractor(user: User) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only contractors can manage job postings",
         )
+
+
+def _ensure_subcontractor(user: User) -> None:
+    if user.role != "subcontractor":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only subcontractors can apply")
 
 
 @router.post("/", response_model=JobPostingOut, status_code=status.HTTP_201_CREATED)
@@ -71,3 +78,46 @@ async def list_job_postings(db: AsyncSession = Depends(get_db)) -> List[JobPosti
     result = await db.execute(select(JobPosting).order_by(JobPosting.created_at.desc()))
     postings = result.scalars().all()
     return [JobPostingOut.from_orm(posting) for posting in postings]
+
+
+@router.post("/{job_posting_id}/apply", response_model=JobApplicationOut, status_code=status.HTTP_201_CREATED)
+async def apply_to_job_posting(
+    job_posting_id: int,
+    payload: JobApplicationApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JobApplicationOut:
+    _ensure_subcontractor(current_user)
+
+    posting_result = await db.execute(select(JobPosting).where(JobPosting.id == job_posting_id))
+    posting = posting_result.scalar_one_or_none()
+    if posting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job posting not found")
+
+    existing_result = await db.execute(
+        select(JobApplication).where(
+            JobApplication.job_posting_id == posting.id,
+            JobApplication.subcontractor_id == current_user.id,
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing is not None:
+        # If they previously applied, keep the latest note, but do not change a non-pending decision.
+        if existing.status == JobApplicationStatus.pending.value:
+            existing.note = payload.note
+            await db.commit()
+            await db.refresh(existing)
+        return JobApplicationOut.from_orm(existing)
+
+    application = JobApplication(
+        job_posting_id=posting.id,
+        subcontractor_id=current_user.id,
+        contractor_id=posting.contractor_id,
+        note=payload.note,
+        status=JobApplicationStatus.pending.value,
+    )
+    db.add(application)
+    await db.flush()
+    await db.commit()
+    await db.refresh(application)
+    return JobApplicationOut.from_orm(application)

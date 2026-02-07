@@ -713,10 +713,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         pending_user = pending_result.scalar_one_or_none()
         if pending_user is not None:
             if not SKIP_EMAIL_CONFIRMATION:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Please confirm your email before logging in.",
-                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please confirm your email before logging in.",
+            )
 
             # Dev convenience: auto-confirm pending users at login time.
             if not verify_password(form_data.password, pending_user.hashed_password):
@@ -739,10 +739,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
             user = new_user
 
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect email or password",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password",
+        )
 
     if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email or password")

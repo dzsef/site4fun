@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '../../types/chat';
+import { decideApplication } from '../../utils/jobApplicationsApi';
 
 export type ChatWindowProps = {
   messages: Message[];
@@ -19,6 +20,7 @@ const formatTimestamp = (iso: string) => {
 };
 
 const JOB_CARD_PREFIX = '__JOB_CARD__:';
+const APPLICATION_PREFIX = '__APPLICATION__:';
 
 type JobCardPayload = {
   v: 1;
@@ -37,6 +39,28 @@ const parseJobCard = (body: string): JobCardPayload | null => {
   try {
     const payload = JSON.parse(raw) as JobCardPayload;
     if (payload && payload.v === 1) return payload;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+type ApplicationPayload = {
+  v: 1;
+  id: number;
+  job_posting_id: number;
+  title: string;
+  note: string;
+  status: 'pending' | 'accepted' | 'rejected';
+};
+
+const parseApplication = (body: string): ApplicationPayload | null => {
+  if (!body.startsWith(APPLICATION_PREFIX)) return null;
+  const raw = body.slice(APPLICATION_PREFIX.length).trim();
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw) as ApplicationPayload;
+    if (payload && payload.v === 1 && typeof payload.id === 'number') return payload;
     return null;
   } catch {
     return null;
@@ -66,6 +90,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [decisionBusyId, setDecisionBusyId] = useState<number | null>(null);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const previousMessageCount = useRef<number>(0);
   const busyRef = useRef(false);
@@ -117,6 +143,31 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     [sendDraft],
   );
 
+  const token = React.useMemo(() => localStorage.getItem('token'), []);
+
+  const handleDecision = useCallback(
+    async (application: ApplicationPayload, decision: 'accepted' | 'rejected') => {
+      if (!token) return;
+      if (decisionBusyId != null) return;
+      try {
+        setDecisionError(null);
+        setDecisionBusyId(application.id);
+        const updated = await decideApplication(token, application.id, decision);
+        const body = `${APPLICATION_PREFIX}${JSON.stringify({
+          ...application,
+          status: updated.status,
+        })}`;
+        await onSend(body);
+      } catch (e) {
+        console.error(e);
+        setDecisionError((e as Error).message);
+      } finally {
+        setDecisionBusyId(null);
+      }
+    },
+    [decisionBusyId, onSend, token],
+  );
+
   return (
     <div className="flex h-full flex-col rounded-[2.5rem] border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_30px_120px_rgba(5,9,18,0.7)]">
       <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
@@ -155,6 +206,82 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           messages.map((message) => {
             const isMine = counterpartId != null ? message.sender_id !== counterpartId : true;
             const jobCard = parseJobCard(message.body);
+            const application = parseApplication(message.body);
+            if (application) {
+              const showActions = viewerRole === 'contractor' && application.status === 'pending' && !isMine;
+              const badge =
+                application.status === 'pending'
+                  ? t('messages.application.status.pending')
+                  : application.status === 'accepted'
+                    ? t('messages.application.status.accepted')
+                    : t('messages.application.status.rejected');
+              return (
+                <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[78%] rounded-[1.75rem] border px-6 py-5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] ${
+                      isMine
+                        ? 'border-primary/40 bg-gradient-to-br from-primary/20 via-amber-400/10 to-orange-500/10 text-white'
+                        : 'border-white/10 bg-white/[0.06] text-white/90'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="space-y-2">
+                        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/60">
+                          {t('messages.application.label')}
+                        </p>
+                        <h3 className="text-lg font-semibold text-white">{application.title}</h3>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[0.6rem] uppercase tracking-[0.35em] text-white/50">
+                          {formatTimestamp(message.created_at)}
+                        </div>
+                        <div className="mt-2 inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-white/75">
+                          {badge}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 px-4 py-3">
+                      <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+                        {t('messages.application.note')}
+                      </div>
+                      <div className="mt-1 whitespace-pre-wrap break-words text-sm text-white/90">
+                        {application.note || '—'}
+                      </div>
+                    </div>
+
+                    {decisionError && (
+                      <div className="mt-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
+                        {decisionError}
+                      </div>
+                    )}
+
+                    {showActions && (
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          disabled={decisionBusyId === application.id}
+                          onClick={() => void handleDecision(application, 'rejected')}
+                          className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-white/80 transition hover:border-white/25 hover:bg-white/10 disabled:opacity-60"
+                        >
+                          {t('messages.application.actions.reject')}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={decisionBusyId === application.id}
+                          onClick={() => void handleDecision(application, 'accepted')}
+                          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-dark-900 shadow-[0_18px_60px_rgba(245,184,0,0.35)] transition-transform duration-300 hover:-translate-y-0.5 disabled:opacity-60"
+                        >
+                          {decisionBusyId === application.id
+                            ? t('messages.application.actions.working')
+                            : t('messages.application.actions.accept')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             if (jobCard) {
               return (
                 <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>

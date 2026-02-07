@@ -11,6 +11,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from app.db import Base, DATABASE_URL  # noqa: E402
 from app.models import user  # noqa: F401,E402
 from app.models import profile  # noqa: F401,E402
+from app.models import job_posting  # noqa: F401,E402
+from app.models import chat  # noqa: F401,E402
+from app.models import job_application  # noqa: F401,E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

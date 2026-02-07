@@ -2,6 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { createConversation, sendMessage } from '../utils/chatApi';
+import { applyToJobPosting } from '../utils/jobApplicationsApi';
+
 type JobPosting = {
     id: number;
     contractor_id: number;
@@ -17,6 +20,8 @@ type JobPosting = {
 };
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+const APPLICATION_PREFIX = '__APPLICATION__:';
 
 const SubcontractorMarketplace: React.FC = () => {
     const { t } = useTranslation();
@@ -65,7 +70,7 @@ const SubcontractorMarketplace: React.FC = () => {
         setApplyError(null);
     };
 
-    const sendApply = () => {
+    const sendApply = async () => {
         if (!applyTarget) return;
         if (!token) {
             const next = encodeURIComponent('/subcontractor/marketplace');
@@ -82,12 +87,25 @@ const SubcontractorMarketplace: React.FC = () => {
             return;
         }
         try {
-            sessionStorage.setItem(`chat:outreach:${applyTarget.contractor_id}`, trimmed);
-        } catch {
-            // ignore
+            setApplyError(null);
+            const convo = await createConversation(token, applyTarget.contractor_id);
+            const conversationId = convo.conversation.id;
+            const application = await applyToJobPosting(token, applyTarget.id, trimmed);
+            const body = `${APPLICATION_PREFIX}${JSON.stringify({
+                v: 1,
+                id: application.id,
+                job_posting_id: application.job_posting_id,
+                title: applyTarget.title,
+                note: application.note ?? trimmed,
+                status: application.status,
+            })}`;
+            await sendMessage(token, conversationId, body);
+            closeApply();
+            navigate(`/messages?conversation=${conversationId}`);
+        } catch (e) {
+            console.error(e);
+            setApplyError((e as Error).message);
         }
-        closeApply();
-        navigate(`/messages?start=${applyTarget.contractor_id}`);
     };
 
     return (
